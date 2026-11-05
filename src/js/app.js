@@ -28,21 +28,20 @@
 
   async function initSettings() {
     const api = window.s21, prov = $('#setProvider');
-    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2', 'workers-ai': '@cf/meta/llama-3.3-70b-instruct-fp8-fast  (leave empty for default)' };
+    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2' };
     const sync = () => {
       const p = prov.value; $('#setOnline').style.display = p === 'offline' ? 'none' : '';
-      $('#setBaseRow').style.display = p === 'openai' ? '' : 'none'; $('#setKeyRow').style.display = p === 'workers-ai' ? 'none' : ''; $('#setForget').style.display = p === 'workers-ai' ? 'none' : '';
+      $('#setBaseRow').style.display = p === 'openai' ? '' : 'none';
       $('#setModel').placeholder = PH[p] || '';
     };
     prov.onchange = sync;
     let s = { provider: 'offline', model: '', base: '', hasKey: false };
-    if (api && api.getSettings) s = await api.getSettings(); else s = S21.Tutor.webSettings();
-    if (!api) [...prov.options].forEach(o => { if (o.value === 'anthropic' || o.value === 'openai') o.remove(); }); else [...prov.options].forEach(o => { if (o.value === 'workers-ai') o.remove(); });
+    if (api && api.getSettings) s = await api.getSettings();
     prov.value = s.provider; $('#setModel').value = s.model || ''; $('#setBase').value = s.base || '';
     $('#setKeyState').textContent = s.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : (s.encrypted === false && s.provider !== 'offline' ? 'Note: secure storage is unavailable on this system.' : '');
     sync();
     $('#setSave').onclick = async () => {
-      if (!api) { const ok = S21.Tutor.saveWebSettings({ provider: prov.value, model: $('#setModel').value.trim() }); $('#setMsg').textContent = ok ? 'Saved ✓' : 'Could not save in this browser.'; S21.Tutor.refreshSettings(); return; }
+      if (!api) { $('#setMsg').textContent = 'Online engines are available in the desktop app.'; return; }
       const r = await api.setSettings({ provider: prov.value, model: $('#setModel').value.trim(), base: $('#setBase').value.trim(), key: $('#setKey').value.trim() || undefined });
       $('#setKey').value = ''; $('#setMsg').textContent = r && r.ok ? 'Saved ✓' : 'Could not save: ' + (r && r.error || 'unknown error');
       const ns = await api.getSettings(); $('#setKeyState').textContent = ns.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : '';
