@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f7a5a">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart21 ElectroLab — Arduino & Electronics Emulator</title>
+<link rel="icon" type="image/png" href="img/appicon-64.png">
+<link rel="apple-touch-icon" href="img/appicon-192.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 8h6"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 4v16M16 4v16"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7H4v5"/><path d="M4 12a8 8 0 0 1 14 -3 8 8 0 0 1 1 7"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 7h5v5"/><path d="M20 12a8 8 0 0 0-14-3 8 8 0 0 0-1 7"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h12l4 4v14H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 12h3l2-7 4 14 3-10 2 3h6"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol>
+    <symbol id="i-new" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></symbol>
+    <symbol id="i-stopai" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v2a3 3 0 0 0 3 3M16 6h4v2a3 3 0 0 1-3 3M12 13v4M8 21h8M10 17h4"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16M7 15l4-5 3 3 5-7"/></symbol>
+    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.1"/></symbol>
+    <symbol id="i-volt" viewBox="0 0 24 24"><path d="M3 17c3-9 6-9 9 0s6 9 9 0"/><path d="M3 21h18"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+  </defs>
+</svg>
+
+<div id="app">
+  <header id="topbar">
+    <div class="top-inner">
+      <button class="brand" data-view="home" aria-label="Smart21 ElectroLab home"><img class="logo" src="img/logo-96.png" alt=""><span>Smart21<em>ElectroLab</em></span></button>
+      <div class="gsearch" role="search">
+        <svg class="ic"><use href="#i-search"/></svg>
+        <input id="gSearch" type="search" placeholder="Search lessons, examples &amp; challenges" autocomplete="off" aria-label="Search lessons, examples and challenges">
+        <div class="gresults" id="gResults" hidden></div>
+      </div>
+      <div class="top-actions">
+        <button class="pill-btn" id="topNew"><svg class="ic"><use href="#i-plus"/></svg><span>New circuit</span></button>
+        <button class="round-btn avatar" id="topAvatar" title="Settings" aria-label="Settings">S21</button>
+        <button class="round-btn" id="themeBtn" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="ic"><use href="#i-sun"/></svg><span id="themeLabel" class="sr-only">Light mode</span></button>
+      </div>
+    </div>
+  </header>
+  <nav id="topnav" aria-label="Main navigation">
+    <div class="nav-inner">
+      <button class="nav on" data-view="home">Home</button>
+      <button class="nav" data-view="lab">Circuit Lab</button>
+      <button class="nav" data-view="learn">Lessons</button>
+      <button class="nav" data-view="challenges">Challenges</button>
+      <button class="nav" data-view="ai">AI Tutor</button>
+      <button class="nav" data-view="settings">Settings</button>
+      <span class="ver">v<span id="appVer">1.0.0</span> · works offline</span>
+    </div>
+  </nav>
+
+  <main id="views">
+    <!-- ================= LAB ================= -->
+    <section id="view-home" class="view on"><div id="homeBody" class="home"></div></section>
+    <section id="view-lab" class="view">
+      <div class="toolbar">
+        <div class="tb-group">
+          <button class="btn primary" id="btnRun" title="Run (F5)"><svg class="ic"><use href="#i-play"/></svg><span>Run</span></button>
+          <button class="btn" id="btnPause" title="Pause" disabled><svg class="ic"><use href="#i-pause"/></svg></button>
+          <button class="btn" id="btnStop" title="Stop and reset" disabled><svg class="ic"><use href="#i-stop"/></svg></button>
+          <select id="speed" title="Simulation speed"><option value="0.1">0.1×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select>
+          <button class="btn icon" id="btnSound" title="Sound on/off"><svg class="ic"><use href="#i-mute"/></svg></button>
+        </div>
+        <div class="tb-group">
+          <button class="btn icon" id="btnUndo" title="Undo (Ctrl+Z)"><svg class="ic"><use href="#i-undo"/></svg></button>
+          <button class="btn icon" id="btnRedo" title="Redo (Ctrl+Y)"><svg class="ic"><use href="#i-redo"/></svg></button>
+          <button class="btn icon" id="btnRotate" title="Rotate (R)"><svg class="ic"><use href="#i-rotate"/></svg></button>
+          <button class="btn icon" id="btnDup" title="Duplicate (Ctrl+D)"><svg class="ic"><use href="#i-copy"/></svg></button>
+          <button class="btn icon" id="btnDel" title="Delete (Del)"><svg class="ic"><use href="#i-trash"/></svg></button>
+          <button class="btn icon" id="btnFit" title="Fit to screen (F)"><svg class="ic"><use href="#i-fit"/></svg></button>
+        </div>
+        <div class="tb-group">
+          <button class="btn" id="btnGallery" title="Browse the examples gallery"><svg class="ic"><use href="#i-grid"/></svg><span>Examples</span></button>
+          <button class="btn" id="btnTrouble" title="Troubleshooting practice: find the planted fault"><svg class="ic"><use href="#i-check"/></svg><span>Troubleshoot</span></button>
+          <select id="exSelect" title="Load an example" hidden><option value="">Examples…</option></select>
+          <button class="btn icon" id="btnNew" title="New circuit: choose a template (Ctrl+N)"><svg class="ic"><use href="#i-new"/></svg></button>
+          <button class="btn icon" id="btnOpen" title="Open project"><svg class="ic"><use href="#i-folder"/></svg></button>
+          <button class="btn icon" id="btnTpl" title="Save this circuit as a template"><svg class="ic"><use href="#i-copy"/></svg></button>
+          <button class="btn icon" id="btnSave" title="Save project (Ctrl+S)"><svg class="ic"><use href="#i-save"/></svg></button>
+        </div>
+        <div class="tb-group">
+          <button class="btn" id="btnAnalysis" title="DC sweep and frequency response"><svg class="ic"><use href="#i-chart"/></svg><span>Analysis</span></button>
+          <button class="btn" id="btnProject" title="Export image, parts list, SPICE netlist"><svg class="ic"><use href="#i-export"/></svg><span>Export</span></button>
+          <button class="btn" id="btnCheck" title="Check the circuit for mistakes"><svg class="ic"><use href="#i-check"/></svg><span>Check</span><b class="pill" id="docPill" hidden></b></button>
+          <button class="btn" id="btnSchem" title="Switch between realistic parts and standard schematic symbols"><span>Schematic</span></button>
+          <button class="btn icon" id="btnWireV" title="Colour the wires by voltage (while running)"><svg class="ic"><use href="#i-volt"/></svg></button>
+          <button class="btn icon" id="btnTour" title="Take the guided tour"><svg class="ic"><use href="#i-help"/></svg></button>
+        </div>
+        <div class="tb-status"><span class="dot" id="runDot"></span><span id="simState">Stopped</span><span class="mono" id="simTime">t = 0.000 s</span><span class="soft" id="autoState" title="Your work is saved automatically"></span></div>
+      </div>
+
+      <aside class="palette">
+        <div class="pal-search"><svg class="ic"><use href="#i-search"/></svg><input id="palSearch" type="search" placeholder="Search parts" autocomplete="off"></div>
+        <div id="palList" class="pal-list"></div>
+        <div class="pal-tip">Drag a part onto the canvas, or click it to add. Drag from a pin to draw a wire. <kbd>Shift</kbd>+click a pin to probe it on the scope.</div>
+      </aside>
+
+      <div class="canvas-wrap">
+        <svg id="canvas" tabindex="0" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="hover-info" id="hoverInfo" hidden></div>
+        <div class="challenge-bar" id="chBar" hidden>
+          <div class="cb-row"><svg class="ic"><use href="#i-trophy"/></svg><b id="chBarTitle"></b><span class="grow"></span><button class="btn small" id="chBarDetails">Task &amp; hints</button><button class="btn small primary" id="chBarCheck">Check my solution</button><button class="btn small icon" id="chBarClose" title="Leave challenge">✕</button></div>
+          <div id="chBarOut" hidden></div>
+        </div>
+        <div class="canvas-hint" id="canvasHint">Pick <b>Examples…</b> at the top, or drag parts from the left.</div>
+      </div>
+
+      <section class="dock">
+        <div class="dock-tabs">
+          <button class="tab on" data-tab="code"><svg class="ic"><use href="#i-code"/></svg>Sketch</button>
+          <button class="tab" data-tab="serial"><svg class="ic"><use href="#i-term"/></svg>Serial</button>
+          <button class="tab" data-tab="scope"><svg class="ic"><use href="#i-wave"/></svg>Scope</button>
+          <button class="tab" data-tab="plotter"><svg class="ic"><use href="#i-wave"/></svg>Plotter</button>
+          <button class="tab" data-tab="logic"><svg class="ic"><use href="#i-wave"/></svg>Logic</button>
+          <button class="tab" data-tab="console"><svg class="ic"><use href="#i-check"/></svg>Console <span class="badge" id="consoleBadge" hidden>0</span></button>
+          <span class="grow"></span>
+          <button class="btn small" id="btnImport" title="Open an .ino file"><svg class="ic"><use href="#i-folder"/></svg>Import</button>
+          <button class="btn small" id="btnExport" title="Save the sketch as an .ino file for the Arduino IDE"><svg class="ic"><use href="#i-download"/></svg>Export</button>
+          <button class="btn small" id="btnCompile"><svg class="ic"><use href="#i-check"/></svg>Verify</button>
+        </div>
+        <div class="dock-body">
+          <div class="pane on" id="pane-code">
+            <div class="code-ed" id="codeEd">
+              <div class="gutter" id="gutter"></div>
+              <div class="code-stack">
+                <pre class="hl" id="codeHl" aria-hidden="true"></pre>
+                <textarea id="codeTa" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Arduino sketch"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="pane" id="pane-serial">
+            <pre class="serial-out" id="serialOut"></pre>
+            <div class="serial-in"><input id="serialIn" placeholder="Send text to the sketch (Serial.read / parseInt)…" autocomplete="off"><button class="btn small" id="serialSend">Send</button><button class="btn small" id="serialClear">Clear</button><span class="soft" id="serialBaud"></span></div>
+          </div>
+          <div class="pane" id="pane-scope">
+            <div class="scope-bar"><label>Time window <select id="scopeWin"><option value="10">10 ms</option><option value="50">50 ms</option><option value="200" selected>200 ms</option><option value="1000">1 s</option><option value="5000">5 s</option><option value="20000">20 s</option></select></label><label>Trigger <select id="scopeTrig"><option value="off">Off (free run)</option><option value="rise">Rising edge, ch 1</option></select></label><span class="grow"></span><button class="btn small" id="scopeClear">Remove probes</button></div>
+            <div class="scope-meta"><span id="scopeLegend" class="scope-legend"></span><span class="soft small" id="scopeCursorInfo"></span></div>
+            <canvas id="scopeCv"></canvas>
+          </div>
+          <div class="pane" id="pane-plotter">
+            <div class="scope-bar"><span class="soft small">Plots the numbers printed with Serial.print / println (one value per line, or several separated by commas, spaces or <code>label:value</code>).</span><button class="btn small" id="plotClear">Clear</button></div>
+            <div class="scope-meta"><span id="plotLegend" class="scope-legend"></span></div>
+            <canvas id="plotCv"></canvas>
+          </div>
+          <div class="pane" id="pane-logic">
+            <div class="scope-bar"><label>Time window <select id="logicWin"><option value="10">10 ms</option><option value="50">50 ms</option><option value="200">200 ms</option><option value="1000" selected>1 s</option><option value="5000">5 s</option><option value="20000">20 s</option></select></label><label class="chk"><input type="checkbox" id="logicBus"> Show bus value</label><button class="btn small" id="logicVcd" title="Save the recorded signals as a VCD file for GTKWave or PulseView">Save VCD</button><button class="btn small" id="logicClear">Clear</button></div>
+            <div class="scope-meta"><span class="soft small" id="logicInfo">Shift+click up to 8 pins on the canvas: the Logic tab shows them as a timing diagram, the Scope tab as voltages.</span></div>
+            <canvas id="logicCv"></canvas>
+          </div>
+          <div class="pane" id="pane-console"><div class="console" id="consoleOut"></div></div>
+        </div>
+      </section>
+
+      <aside class="rdock" id="rdock">
+        <div class="rdock-resize" id="rdockResize" title="Drag to resize the panels"></div>
+        <section class="rpanel" id="learnPanel">
+          <header class="rp-head"><button class="rp-toggle" aria-label="Collapse panel"><svg class="ic"><use href="#i-chev"/></svg></button><span id="learnTitle">Learn</span><span class="grow"></span><button class="rp-menu" id="learnMenu" aria-label="Panel menu">⋯</button></header>
+          <div class="rp-body" id="learnBody"></div>
+        </section>
+        <section class="rpanel" id="propsPanel">
+          <header class="rp-head"><button class="rp-toggle" aria-label="Collapse panel"><svg class="ic"><use href="#i-chev"/></svg></button><span>Properties</span></header>
+          <div class="rp-body"><div class="inspector" id="inspector"></div></div>
+        </section>
+      </aside>
+    </section>
+
+    <!-- ================= LESSONS ================= -->
+    <section id="view-learn" class="view">
+      <div class="learn-list" id="lessonList"></div>
+      <div class="learn-body" id="lessonBody"></div>
+    </section>
+
+    <!-- ================= CHALLENGES ================= -->
+    <section id="view-challenges" class="view">
+      <div class="learn-list" id="chList"></div>
+      <div class="learn-body" id="chBody"></div>
+    </section>
+
+    <!-- ================= AI ================= -->
+    <section id="view-ai" class="view">
+      <aside class="ai-side">
+        <button class="new-chat" id="aiNew"><svg class="ic"><use href="#i-plus"/></svg>New chat</button>
+        <div class="search-wrap"><svg class="ic"><use href="#i-search"/></svg><input id="aiSearch" type="search" placeholder="Search chats" autocomplete="off"></div>
+        <nav class="history" id="aiHistory"></nav>
+        <button class="link-btn" id="aiClear"><svg class="ic"><use href="#i-trash"/></svg>Clear all chats</button>
+      </aside>
+      <div class="ai-main">
+        <header class="ai-top"><div class="model-chip"><svg class="ic"><use href="#i-spark"/></svg><span id="aiEngine">Smart21 Tutor</span></div><label class="ctx-toggle"><input type="checkbox" id="aiCtx" checked> Share my circuit &amp; sketch with the tutor</label></header>
+        <div class="ai-stage" id="aiStage">
+          <div class="welcome" id="aiWelcome">
+            <img class="w-logo" src="img/logo-192.png" alt="Smart21Brain">
+            <h1><span id="aiGreet">Hello</span>, <span class="grad">what shall we build today?</span></h1>
+            <p class="w-sub">Ask about electronics, Arduino code, or your own circuit. I can explain, calculate and debug.</p>
+            <div class="cards" id="aiCards"></div>
+          </div>
+          <div class="thread" id="aiThread"></div>
+        </div>
+        <footer class="composer-wrap">
+          <div class="modes" id="aiModes">
+            <button data-mode="" class="on">Auto</button><button data-mode="learn">Explain</button><button data-mode="calc">Calculate</button><button data-mode="debug">Debug</button><button data-mode="quiz">Quiz me</button>
+          </div>
+          <form class="composer" id="aiForm"><textarea id="aiInput" rows="1" maxlength="4000" placeholder="Message the tutor…" aria-label="Message the tutor"></textarea><button type="submit" class="send" id="aiSend" aria-label="Send" disabled><svg class="ic"><use href="#i-send"/></svg></button></form>
+          <p class="fine" id="aiFine">The tutor can make mistakes. Check important answers.</p>
+        </footer>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section id="view-settings" class="view">
+      <div class="settings">
+        <h1>Settings</h1>
+        <div class="card-box">
+          <h2>AI tutor engine</h2>
+          <p class="soft">The built-in tutor works offline with no account. For free-form answers, connect your own AI service: Anthropic (Claude), any OpenAI-compatible service, or a local model such as Ollama.</p>
+          <label>Engine
+            <select id="setProvider"><option value="offline">Built-in offline tutor</option><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI-compatible / local (Ollama, LM Studio…)</option></select>
+          </label>
+          <div id="setOnline">
+            <label>Model <input id="setModel" placeholder="claude-sonnet-5-5"></label>
+            <label id="setBaseRow">Base URL <input id="setBase" placeholder="https://api.openai.com/v1  or  http://localhost:11434/v1"></label>
+            <label>API key <input id="setKey" type="password" placeholder="Paste key (stored encrypted on this PC)" autocomplete="off"><span class="soft" id="setKeyState"></span></label>
+          </div>
+          <div class="row"><button class="btn primary" id="setSave">Save</button><button class="btn" id="setForget">Remove stored key</button><span class="soft" id="setMsg"></span></div>
+          <p class="soft small">Your key is encrypted with the operating system’s secure storage and only used from the app’s background process. Nothing is sent anywhere until you choose an online engine and send a message.</p>
+        </div>
+        <div class="card-box">
+          <h2>Simulator</h2>
+          <label class="check"><input type="checkbox" id="setSound"> Play buzzer sound</label>
+          <label class="check"><input type="checkbox" id="setHints" checked> Show hover readouts on pins</label>
+        </div>
+        <div class="card-box">
+          <h2>About</h2>
+          <p class="soft">Smart21 ElectroLab — a circuit and Arduino Uno emulator for studying electronics. The Arduino emulator runs a practical subset of Arduino C++ (variables, arrays, functions, loops, Serial, pinMode, digitalRead/Write, analogRead/Write, delay, millis, tone…). It is a learning tool, not a replacement for real hardware.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<!-- ================= FLOATING AI ASSISTANT (bottom right) ================= -->
+<div id="aiFab" class="ai-fab" data-open="0">
+  <section class="fab-panel" id="fabPanel" role="dialog" aria-label="AI Tutor" hidden>
+    <header class="fab-head">
+      <img class="fab-av" src="img/logo-64.png" alt="">
+      <div class="fab-title"><b>AI Tutor</b><small id="fabEngine">Smart21 Tutor · offline</small></div>
+      <button class="fab-ib" id="fabNew" title="New chat" aria-label="New chat"><svg class="ic"><use href="#i-plus"/></svg></button>
+      <button class="fab-ib" id="fabExpand" title="Open full page" aria-label="Open full page"><svg class="ic"><use href="#i-expand"/></svg></button>
+      <button class="fab-ib" id="fabClose" title="Close" aria-label="Close"><svg class="ic"><use href="#i-close"/></svg></button>
+    </header>
+    <div class="fab-stage" id="fabStage">
+      <div class="fab-welcome" id="fabWelcome">
+        <h3><span id="fabGreet">Hello</span>! <span class="grad">What shall we build?</span></h3>
+        <p>Ask about electronics or Arduino, or let me look at your circuit.</p>
+        <div class="fab-chips" id="fabChips"></div>
+      </div>
+      <div class="fab-thread thread" id="fabThread"></div>
+    </div>
+    <footer class="fab-foot">
+      <label class="fab-ctx"><input type="checkbox" id="fabCtx" checked> Share my circuit &amp; sketch</label>
+      <form class="fab-form" id="fabForm"><textarea id="fabInput" rows="1" maxlength="4000" placeholder="Ask the tutor…" aria-label="Message the tutor"></textarea><button type="submit" class="send" id="fabSend" aria-label="Send" disabled><svg class="ic"><use href="#i-send"/></svg></button></form>
+    </footer>
+  </section>
+  <button class="fab-btn" id="fabBtn" aria-label="Open AI Tutor" aria-expanded="false" title="Ask the AI Tutor">
+    <img class="fab-logo" src="img/logo-96.png" alt="" width="40" height="40">
+    <svg class="ic fab-ic-close"><use href="#i-close"/></svg>
+    <span class="fab-label">Ask AI</span>
+  </button>
+</div>
+<div id="toasts" aria-live="polite"></div>
+
+<script src="js/sim/solver.js"></script>
+<script src="js/arduino/interp.js"></script>
+<script src="js/sim/parts.js"></script>
+<script src="js/sim/parts2.js"></script>
+<script src="js/sim/parts3.js"></script>
+<script src="js/sim/runtime.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/doctor.js"></script>
+<script src="js/export.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/examples.js"></script>
+<script src="js/sim/schematic.js"></script>
+<script src="js/sim/editor.js"></script>
+<script src="js/lab.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/library.js"></script>
+<script src="js/pwa.js"></script>
+<script src="js/trouble.js"></script>
+<script src="js/report.js"></script>
+<script src="js/datasheet.js"></script>
+<script src="js/logic.js"></script>
+<script src="js/plotter.js"></script>
+<script src="js/onboarding.js"></script>
+<script src="js/guide.js"></script>
+<script src="js/challenges.js"></script>
+<script src="js/challenges2.js"></script>
+<script src="js/lessons.js"></script>
+<script src="js/lessons2.js"></script>
+<script src="js/home.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/aifab.js"></script>
+<script src="js/gsearch.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
