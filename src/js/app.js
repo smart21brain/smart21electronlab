@@ -28,19 +28,23 @@
 
   async function initSettings() {
     const api = window.s21, prov = $('#setProvider');
-    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2' };
+    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2', cloudflare: '@cf/meta/llama-3.1-8b-instruct (default)' };
+    const web = !api && /^https?:$/.test(location.protocol);
+    if (web) { $('#optCf').hidden = false; ['anthropic', 'openai'].forEach(v => { const o = prov.querySelector('option[value="' + v + '"]'); if (o) o.remove(); }); } else $('#optCf').remove();
     const sync = () => {
-      const p = prov.value; $('#setOnline').style.display = p === 'offline' ? 'none' : '';
+      const p = prov.value; $('#setOnline').style.display = p === 'offline' ? 'none' : ''; $('#setKeyRow').style.display = p === 'cloudflare' ? 'none' : '';
       $('#setBaseRow').style.display = p === 'openai' ? '' : 'none';
       $('#setModel').placeholder = PH[p] || '';
     };
     prov.onchange = sync;
     let s = { provider: 'offline', model: '', base: '', hasKey: false };
     if (api && api.getSettings) s = await api.getSettings();
+    else if (web) { try { s = Object.assign({ provider: 'cloudflare', model: '', base: '', hasKey: false }, JSON.parse(localStorage.getItem('s21lab-web-ai') || '{}')); } catch (_) { s.provider = 'cloudflare'; } }
     prov.value = s.provider; $('#setModel').value = s.model || ''; $('#setBase').value = s.base || '';
     $('#setKeyState').textContent = s.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : (s.encrypted === false && s.provider !== 'offline' ? 'Note: secure storage is unavailable on this system.' : '');
     sync();
     $('#setSave').onclick = async () => {
+      if (!api && web) { S21.Tutor.webSave(prov.value, $('#setModel').value.trim()); $('#setMsg').textContent = 'Saved ✓'; S21.Tutor.refreshSettings(); return; }
       if (!api) { $('#setMsg').textContent = 'Online engines are available in the desktop app.'; return; }
       const r = await api.setSettings({ provider: prov.value, model: $('#setModel').value.trim(), base: $('#setBase').value.trim(), key: $('#setKey').value.trim() || undefined });
       $('#setKey').value = ''; $('#setMsg').textContent = r && r.ok ? 'Saved ✓' : 'Could not save: ' + (r && r.error || 'unknown error');

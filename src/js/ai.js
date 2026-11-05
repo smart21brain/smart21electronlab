@@ -343,6 +343,37 @@
   /* ============================ UI ============================ */
   const $ = (s, r) => (r || document).querySelector(s);
   const Tutor = { chats: [], cur: null, mode: '', busy: false, settings: { provider: 'offline' }, reqId: 0, active: null };
+  /* Web/PWA build (served by the Cloudflare Worker): the AI runs on Workers AI through POST /api/ai, no key needed. */
+  const WEB = !root.s21 && /^https?:$/.test(root.location.protocol);
+  const WKEY = 's21lab-web-ai';
+  const webCfg = () => { try { return Object.assign({ provider: 'cloudflare', model: '' }, JSON.parse(localStorage.getItem(WKEY) || '{}')); } catch (_) { return { provider: 'cloudflare', model: '' }; } };
+  const canOnline = () => Tutor.settings.provider !== 'offline' && ((root.s21 && root.s21.aiStart) || (WEB && Tutor.settings.provider === 'cloudflare'));
+  Tutor.webSave = (provider, model) => { try { localStorage.setItem(WKEY, JSON.stringify({ provider: provider === 'offline' ? 'offline' : 'cloudflare', model: model || '' })); } catch (_) {} };
+  async function webAI(id, req, a) {
+    const ctl = new AbortController(); a.ctl = ctl;
+    try {
+      const res = await fetch('/api/ai', { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) });
+      if (!res.ok) { let d = ''; try { const j = await res.json(); d = j.error || ''; } catch (_) {} throw new Error('Workers AI answered ' + res.status + (d ? ': ' + d : '')); }
+      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '', fin = false;
+      while (!fin) {
+        const r = await reader.read(); if (r.done) break;
+        buf += dec.decode(r.value, { stream: true }); let i;
+        while ((i = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1);
+          if (!line.startsWith('data:')) continue; const d = line.slice(5).trim();
+          if (d === '[DONE]') { fin = true; break; } let j; try { j = JSON.parse(d); } catch (_) { continue; }
+          const t = typeof j.response === 'string' ? j.response : (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) || '';
+          if (t) { a.reply.t += t; a.bub.innerHTML = md(a.reply.t); scroll(); }
+        }
+      }
+      if (Tutor.active && Tutor.active.id === id) Tutor.active = null; a.resolve();
+    } catch (e) {
+      if (Tutor.active && Tutor.active.id === id) Tutor.active = null;
+      if (ctl.signal.aborted) { a.resolve(); return; }
+      a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + (e.message || e) + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'; a.bub.innerHTML = md(a.reply.t); a.resolve();
+    }
+  }
+  const abortActive = () => { const a = Tutor.active; if (!a) return; if (a.ctl) a.ctl.abort(); else if (root.s21 && root.s21.aiAbort) root.s21.aiAbort(a.id); };
   S21.Tutor = Tutor;
   const load = () => { try { Tutor.chats = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { Tutor.chats = []; } };
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(Tutor.chats.slice(0, 60))); } catch (_) {} };
@@ -398,7 +429,7 @@
   function renderAll() { renderHistory(); renderThread(); updateEngineLabel(); }
   function updateEngineLabel() {
     const s = Tutor.settings; let label = 'Smart21 Tutor · offline';
-    if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
+    if (s.provider === 'cloudflare') label = 'Workers AI · ' + (s.model ? s.model.replace(/^@cf\//, '') : 'Llama 3.1'); else if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
     $('#aiEngine').textContent = label; Tutor.engineLabel = label; (Tutor.onEngine || []).forEach(fn => { try { fn(label, s); } catch (_) {} });
     $('#aiFine').textContent = s.provider === 'offline' ? 'Offline tutor: great for calculations and the basics. Connect an online AI in Settings for open-ended questions.' : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
   }
@@ -415,7 +446,7 @@
     Tutor.busy = true; setSend(true);
     const wantCtx = $('#aiCtx').checked;
     try {
-      if (Tutor.settings.provider !== 'offline' && window.s21 && window.s21.aiStart) await online(chat, mode, wantCtx, reply, bub);
+      if (canOnline()) await online(chat, mode, wantCtx, reply, bub);
       else await offline(text, mode, chat, wantCtx, reply, bub);
     } catch (e) { reply.t += (reply.t ? '\n\n' : '') + '⚠️ ' + (e.message || e); bub.innerHTML = md(reply.t); }
     Tutor.busy = false; setSend(false); save(); decorate(bub); scroll(); renderHistory();
@@ -435,7 +466,8 @@
       const modeHint = { learn: 'The student wants a clear explanation.', calc: 'The student wants a calculation: show the formula and numbers.', debug: 'The student wants help debugging their circuit/sketch: find real problems.', quiz: 'Quiz the student with one multiple-choice question at a time.' }[mode];
       if (last) last.content += (modeHint ? '\n\n[' + modeHint + ']' : '') + (wantCtx && S21.Lab ? '\n\n[Student’s current lab state]\n' + S21.Lab.describeCircuit() : '');
       Tutor.active = { id, resolve, reject, bub, reply };
-      window.s21.aiStart({ id, provider: s.provider, model: s.model, base: s.base, system: SYSTEM, messages: hist });
+      if (root.s21 && root.s21.aiStart) root.s21.aiStart({ id, provider: s.provider, model: s.model, base: s.base, system: SYSTEM, messages: hist });
+      else webAI(id, { model: s.model, system: SYSTEM, messages: hist }, Tutor.active);
     });
   }
   function setSend(busy) {
@@ -445,6 +477,7 @@
 
   Tutor.refreshSettings = async function () {
     if (window.s21 && window.s21.getSettings) { try { Tutor.settings = await window.s21.getSettings(); } catch (_) {} }
+    else if (WEB) Tutor.settings = webCfg();
     updateEngineLabel();
   };
   Tutor.init = function () {
@@ -456,7 +489,7 @@
     inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#aiForm').requestSubmit(); } });
     $('#aiForm').addEventListener('submit', e => {
       e.preventDefault();
-      if (Tutor.busy) { if (Tutor.active && window.s21 && window.s21.aiAbort) window.s21.aiAbort(Tutor.active.id); Tutor.busy = false; if (Tutor.active) { Tutor.active.resolve(); } setSend(false); return; }
+      if (Tutor.busy) { abortActive(); Tutor.busy = false; if (Tutor.active) { Tutor.active.resolve(); } setSend(false); return; }
       const t = inp.value; inp.value = ''; inp.style.height = 'auto'; send(t);
     });
     $('#aiModes').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; Tutor.mode = b.dataset.mode; document.querySelectorAll('#aiModes button').forEach(x => x.classList.toggle('on', x === b)); inp.focus(); });
@@ -476,14 +509,14 @@
   Tutor.respond = async function (chat, text, mode, wantCtx, reply, bub) {      // fills `reply`/`bub` with the answer (offline or online engine)
     Tutor.busy = true;
     try {
-      if (Tutor.settings.provider !== 'offline' && window.s21 && window.s21.aiStart) await online(chat, mode || '', wantCtx, reply, bub);
+      if (canOnline()) await online(chat, mode || '', wantCtx, reply, bub);
       else await offline(text, mode || '', chat, wantCtx, reply, bub);
     } catch (e) { reply.t += (reply.t ? '\n\n' : '') + '⚠️ ' + (e.message || e); bub.innerHTML = md(reply.t); }
     Tutor.busy = false; save(); decorate(bub);
   };
   Tutor.stop = function () {
     if (!Tutor.busy) return;
-    if (Tutor.active && window.s21 && window.s21.aiAbort) window.s21.aiAbort(Tutor.active.id);
+    abortActive();
     Tutor.busy = false; if (Tutor.active) Tutor.active.resolve();
   };
   Tutor.offlineAnswer = offlineAnswer; Tutor.md = md; Tutor._calc = { calcOhm, calcLed, calcDivider, calcRC, calcSeriesParallel, calcColor, calcCutoff, calcRL, calcBase };

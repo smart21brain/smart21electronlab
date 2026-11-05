@@ -14,7 +14,9 @@
     "dist:mac": "electron-builder --mac",
     "dist:linux": "electron-builder --linux",
     "pwa": "node scripts/make-pwa.js",
-    "dist:all": "electron-builder --win --linux"
+    "dist:all": "electron-builder --win --linux",
+    "cf:dev": "npm run pwa && npx wrangler dev",
+    "cf:deploy": "npm run pwa && npx wrangler deploy"
   },
   "devDependencies": {
     "electron": "^33.2.0",
