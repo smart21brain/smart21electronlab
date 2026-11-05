@@ -7,8 +7,8 @@ const DEFAULT_MODEL = MODELS[0];
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 
-export default {
-  async fetch(request, env) {
+// Returns a Response for /api/ai and /api/ai/health, or null for any other path so your own routes can handle it.
+export async function handleAi(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/ai/health' && request.method === 'GET') {
@@ -41,6 +41,11 @@ export default {
       }
     }
 
-    return json({ error: 'Not found' }, 404);
+    return null;
+}
+
+export default {
+  async fetch(request, env) {
+    return (await handleAi(request, env)) || json({ error: 'Not found' }, 404);
   }
 };
