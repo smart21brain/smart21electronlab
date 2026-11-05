@@ -8,6 +8,6 @@ const CACHE = 'smart21-electrolab-${version}';
 const ASSETS = ${JSON.stringify(['./'].concat(files.sort()), null, 1)};
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
-self.addEventListener('fetch', e => { if (e.request.method !== 'GET') return; e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))); });
+self.addEventListener('fetch', e => { if (e.request.method !== 'GET' || new URL(e.request.url).pathname.startsWith('/api/')) return; e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))); });
 `;
 fs.writeFileSync(path.join(root, 'sw.js'), sw); console.log('sw.js written with ' + files.length + ' files');

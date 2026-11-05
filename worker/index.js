@@ -13,7 +13,8 @@ const ALLOWED_MODELS = new Set([
 ]);
 const MAX_MESSAGES = 20, MAX_CHARS = 24000, MAX_SYSTEM = 6000, MAX_BODY = 200000;
 
-const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' };
+const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...CORS, 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 
 async function handleAI(request, env) {
   if (!env.AI) return json({ error: 'Workers AI binding "AI" is missing. Check wrangler.jsonc.' }, 500);
@@ -34,7 +35,7 @@ async function handleAI(request, env) {
       stream: true,
       max_tokens: 1800
     });
-    return new Response(stream, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
+    return new Response(stream, { headers: { ...CORS, 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
   } catch (e) {
     return json({ error: (e && e.message) || 'Workers AI error.' }, 502);
   }
@@ -44,6 +45,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/api/ai') {
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
       if (request.method === 'GET') return json({ ok: true, models: [...ALLOWED_MODELS], default: DEFAULT_MODEL });
       if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
       return handleAI(request, env);

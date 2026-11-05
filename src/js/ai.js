@@ -348,12 +348,17 @@
   const WKEY = 's21lab-web-ai';
   const webCfg = () => { try { return Object.assign({ provider: 'cloudflare', model: '' }, JSON.parse(localStorage.getItem(WKEY) || '{}')); } catch (_) { return { provider: 'cloudflare', model: '' }; } };
   const canOnline = () => Tutor.settings.provider !== 'offline' && ((root.s21 && root.s21.aiStart) || (WEB && Tutor.settings.provider === 'cloudflare'));
-  Tutor.webSave = (provider, model) => { try { localStorage.setItem(WKEY, JSON.stringify({ provider: provider === 'offline' ? 'offline' : 'cloudflare', model: model || '' })); } catch (_) {} };
+  Tutor.webSave = (provider, model, url) => { try { localStorage.setItem(WKEY, JSON.stringify({ provider: provider === 'offline' ? 'offline' : 'cloudflare', model: model || '', url: (url || '').trim().replace(/\/+$/, '') })); } catch (_) {} };
   async function webAI(id, req, a) {
     const ctl = new AbortController(); a.ctl = ctl;
     try {
-      const res = await fetch('/api/ai', { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) });
-      if (!res.ok) { let d = ''; try { const j = await res.json(); d = j.error || ''; } catch (_) {} throw new Error('Workers AI answered ' + res.status + (d ? ': ' + d : '')); }
+      const endpoint = ((Tutor.settings && Tutor.settings.url) || '') + '/api/ai';
+      const res = await fetch(endpoint, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) });
+      if (!res.ok || !/event-stream/.test(res.headers.get('content-type') || '')) {
+        let d = ''; try { const j = await res.json(); d = j.error || ''; } catch (_) {}
+        if (res.status === 404 || res.status === 405 || (res.ok && !d)) throw new Error('The Worker was not found at ' + endpoint + ' (status ' + res.status + '). Deploy the Worker on this website, or enter its address in Settings → Worker URL.');
+        throw new Error('Workers AI answered ' + res.status + (d ? ': ' + d : ''));
+      }
       const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '', fin = false;
       while (!fin) {
         const r = await reader.read(); if (r.done) break;
