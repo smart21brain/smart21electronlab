@@ -44,8 +44,13 @@ export async function handleAi(request, env) {
     return null;
 }
 
+import { handleAi } from './index.js'; // path to the copied file
+
 export default {
-  async fetch(request, env) {
-    return (await handleAi(request, env)) || json({ error: 'Not found' }, 404);
+  async fetch(request, env, ctx) {
+    const ai = await handleAi(request, env);   // handles /api/ai and /api/ai/health
+    if (ai) return ai;
+    // ...your existing routes here...
   }
+};
 };

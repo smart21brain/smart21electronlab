@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "smart21-electrolab",
+  "name": "smart21electrolab",
   "main": "worker/index.js",
   "compatibility_date": "2026-11-01",
   "assets": {
@@ -9,5 +9,6 @@
     "run_worker_first": ["/api/*"]
   },
   "ai": { "binding": "AI" },
+"assets": { "directory": "./src", "run_worker_first": ["/api/*"] }
   "observability": { "enabled": true }
 }
