@@ -342,7 +342,7 @@
 
   /* ============================ UI ============================ */
   const $ = (s, r) => (r || document).querySelector(s);
-  const Tutor = { chats: [], cur: null, mode: '', busy: false, settings: { provider: 'offline' }, reqId: 0, active: null };
+  const Tutor = { chats: [], cur: null, mode: '', busy: false, settings: { provider: 'offline' }, reqId: 0, active: null, webAI: false, webCtl: null, webModels: [] };
   S21.Tutor = Tutor;
   const load = () => { try { Tutor.chats = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { Tutor.chats = []; } };
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(Tutor.chats.slice(0, 60))); } catch (_) {} };
@@ -398,9 +398,9 @@
   function renderAll() { renderHistory(); renderThread(); updateEngineLabel(); }
   function updateEngineLabel() {
     const s = Tutor.settings; let label = 'Smart21 Tutor · offline';
-    if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
+    if (s.provider === 'workers-ai') label = Tutor.webAI ? 'Cloudflare Workers AI · ' + String(s.model || (Tutor.webModels[0] || 'default')).replace(/^@cf\//, '') : 'Smart21 Tutor · offline (AI unreachable)'; else if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
     $('#aiEngine').textContent = label; Tutor.engineLabel = label; (Tutor.onEngine || []).forEach(fn => { try { fn(label, s); } catch (_) {} });
-    $('#aiFine').textContent = s.provider === 'offline' ? 'Offline tutor: great for calculations and the basics. Connect an online AI in Settings for open-ended questions.' : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
+    $('#aiFine').textContent = (s.provider === 'workers-ai' && Tutor.webAI) ? 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to Cloudflare Workers AI through this site.' : (s.provider === 'offline' || s.provider === 'workers-ai') ? 'Offline tutor: great for calculations and the basics. Connect an online AI in Settings for open-ended questions.' : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
   }
 
   const SYSTEM = 'You are the AI tutor inside Smart21 ElectroLab, a desktop emulator for learning electronics and Arduino (Uno). Students are beginners (age 10 and up). Be friendly, accurate and concise; explain step by step with small examples; use Markdown, and put code in fenced ```cpp blocks. Use SI units and show formulas. The lab has: a circuit canvas with battery, resistor, LED, capacitor, diode, NPN transistor, potentiometer, LDR, switch, button, buzzer, breadboard and Arduino Uno; a sketch editor running a subset of Arduino C++; a serial monitor; a scope. Safety first: mention current limits (Arduino pin 20 mA) and LED resistors. If the student shares their circuit or sketch, base your help on it and point out real mistakes. Never invent parts the lab does not have. If unsure, say so.';
@@ -415,8 +415,7 @@
     Tutor.busy = true; setSend(true);
     const wantCtx = $('#aiCtx').checked;
     try {
-      if (Tutor.settings.provider !== 'offline' && window.s21 && window.s21.aiStart) await online(chat, mode, wantCtx, reply, bub);
-      else await offline(text, mode, chat, wantCtx, reply, bub);
+      await route(text, mode, chat, wantCtx, reply, bub);
     } catch (e) { reply.t += (reply.t ? '\n\n' : '') + '⚠️ ' + (e.message || e); bub.innerHTML = md(reply.t); }
     Tutor.busy = false; setSend(false); save(); decorate(bub); scroll(); renderHistory();
   }
@@ -427,13 +426,51 @@
       setTimeout(tick, 250);
     });
   }
+  function buildHist(chat, mode, wantCtx) {
+    const hist = chat.msgs.slice(0, -1).slice(-16).filter(m => m.t).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: m.t }));
+    const last = hist[hist.length - 1];
+    const modeHint = { learn: 'The student wants a clear explanation.', calc: 'The student wants a calculation: show the formula and numbers.', debug: 'The student wants help debugging their circuit/sketch: find real problems.', quiz: 'Quiz the student with one multiple-choice question at a time.' }[mode];
+    if (last) last.content += (modeHint ? '\n\n[' + modeHint + ']' : '') + (wantCtx && S21.Lab ? '\n\n[Student’s current lab state]\n' + S21.Lab.describeCircuit() : '');
+    return hist;
+  }
+  /* Web version: stream from this site's Worker (/api/ai), which calls Cloudflare Workers AI. */
+  async function webOnline(chat, mode, wantCtx, reply, bub) {
+    const ctl = new AbortController(); Tutor.webCtl = ctl;
+    try {
+      const res = await fetch('/api/ai', { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: Tutor.settings.model || undefined, system: SYSTEM, messages: buildHist(chat, mode, wantCtx) }) });
+      if (!res.ok || !res.body) { let m = 'HTTP ' + res.status; try { m = (await res.json()).error || m; } catch (_) {} throw new Error(m); }
+      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '', done = false;
+      while (!done) {
+        const r = await reader.read(); if (r.done) break;
+        buf += dec.decode(r.value, { stream: true });
+        let i; while ((i = buf.indexOf('\n')) >= 0) {
+          const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1);
+          if (!line.startsWith('data:')) continue; const d = line.slice(5).trim();
+          if (d === '[DONE]') { done = true; break; }
+          try { const j = JSON.parse(d); const t = typeof j.response === 'string' ? j.response : (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) || ''; if (t) { reply.t += t; bub.innerHTML = md(reply.t); scroll(); } } catch (_) {}
+        }
+      }
+    } finally { if (Tutor.webCtl === ctl) Tutor.webCtl = null; }
+  }
+  Tutor.abortActive = function () {
+    if (Tutor.webCtl) { try { Tutor.webCtl.abort(); } catch (_) {} }
+    if (Tutor.active && window.s21 && window.s21.aiAbort) window.s21.aiAbort(Tutor.active.id);
+  };
+  // picks the engine: desktop online engines, Workers AI on the web, otherwise the built-in offline tutor (also the fallback)
+  async function route(text, mode, chat, wantCtx, reply, bub) {
+    const p = Tutor.settings.provider;
+    if (p === 'workers-ai' && !window.s21 && Tutor.webAI && navigator.onLine !== false) {
+      try { await webOnline(chat, mode, wantCtx, reply, bub); }
+      catch (e) { if (e && e.name === 'AbortError') return; if (reply.t) throw e; await offline(text, mode, chat, wantCtx, reply, bub); }
+      return;
+    }
+    if (p !== 'offline' && p !== 'workers-ai' && window.s21 && window.s21.aiStart) return online(chat, mode, wantCtx, reply, bub);
+    return offline(text, mode, chat, wantCtx, reply, bub);
+  }
   function online(chat, mode, wantCtx, reply, bub) {
     return new Promise((resolve, reject) => {
       const s = Tutor.settings, id = ++Tutor.reqId;
-      const hist = chat.msgs.slice(0, -1).slice(-16).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: m.t }));
-      const last = hist[hist.length - 1];
-      const modeHint = { learn: 'The student wants a clear explanation.', calc: 'The student wants a calculation: show the formula and numbers.', debug: 'The student wants help debugging their circuit/sketch: find real problems.', quiz: 'Quiz the student with one multiple-choice question at a time.' }[mode];
-      if (last) last.content += (modeHint ? '\n\n[' + modeHint + ']' : '') + (wantCtx && S21.Lab ? '\n\n[Student’s current lab state]\n' + S21.Lab.describeCircuit() : '');
+      const hist = buildHist(chat, mode, wantCtx);
       Tutor.active = { id, resolve, reject, bub, reply };
       window.s21.aiStart({ id, provider: s.provider, model: s.model, base: s.base, system: SYSTEM, messages: hist });
     });
@@ -445,8 +482,18 @@
 
   Tutor.refreshSettings = async function () {
     if (window.s21 && window.s21.getSettings) { try { Tutor.settings = await window.s21.getSettings(); } catch (_) {} }
+    else {                                                   // web build: settings live in this browser; Workers AI is the default when the site's Worker answers
+      Tutor.settings = Tutor.webSettings();
+      if (!Tutor.webChecked) { Tutor.webChecked = true; try { const r = await fetch('/api/ai/health', { cache: 'no-store' }); const j = r.ok ? await r.json() : null; Tutor.webAI = !!(j && j.ok); Tutor.webModels = j && j.models || []; } catch (_) { Tutor.webAI = false; } }
+    }
     updateEngineLabel();
   };
+  Tutor.webSettings = function () {
+    let s = {}; try { s = JSON.parse(localStorage.getItem('s21lab-ai') || '{}'); } catch (_) {}
+    return { provider: s.provider === 'offline' ? 'offline' : 'workers-ai', model: s.model || '', base: '', hasKey: false };
+  };
+  Tutor.saveWebSettings = function (p) { try { localStorage.setItem('s21lab-ai', JSON.stringify({ provider: p.provider, model: p.model || '' })); return true; } catch (_) { return false; } };
+  if (typeof window.addEventListener === 'function') window.addEventListener('online', () => { Tutor.webChecked = false; Tutor.refreshSettings(); });
   Tutor.init = function () {
     load(); const h = new Date().getHours(); $('#aiGreet').textContent = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
     $('#aiCards').innerHTML = CARDS.map((c, i) => '<button class="card" data-i="' + i + '"><div class="em">' + c[0] + '</div><div><b>' + c[1] + '</b><span>' + c[2] + '</span></div></button>').join('');
@@ -456,7 +503,7 @@
     inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#aiForm').requestSubmit(); } });
     $('#aiForm').addEventListener('submit', e => {
       e.preventDefault();
-      if (Tutor.busy) { if (Tutor.active && window.s21 && window.s21.aiAbort) window.s21.aiAbort(Tutor.active.id); Tutor.busy = false; if (Tutor.active) { Tutor.active.resolve(); } setSend(false); return; }
+      if (Tutor.busy) { Tutor.abortActive(); Tutor.busy = false; if (Tutor.active) { Tutor.active.resolve(); } setSend(false); return; }
       const t = inp.value; inp.value = ''; inp.style.height = 'auto'; send(t);
     });
     $('#aiModes').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; Tutor.mode = b.dataset.mode; document.querySelectorAll('#aiModes button').forEach(x => x.classList.toggle('on', x === b)); inp.focus(); });
@@ -476,14 +523,13 @@
   Tutor.respond = async function (chat, text, mode, wantCtx, reply, bub) {      // fills `reply`/`bub` with the answer (offline or online engine)
     Tutor.busy = true;
     try {
-      if (Tutor.settings.provider !== 'offline' && window.s21 && window.s21.aiStart) await online(chat, mode || '', wantCtx, reply, bub);
-      else await offline(text, mode || '', chat, wantCtx, reply, bub);
+      await route(text, mode || '', chat, wantCtx, reply, bub);
     } catch (e) { reply.t += (reply.t ? '\n\n' : '') + '⚠️ ' + (e.message || e); bub.innerHTML = md(reply.t); }
     Tutor.busy = false; save(); decorate(bub);
   };
   Tutor.stop = function () {
     if (!Tutor.busy) return;
-    if (Tutor.active && window.s21 && window.s21.aiAbort) window.s21.aiAbort(Tutor.active.id);
+    Tutor.abortActive();
     Tutor.busy = false; if (Tutor.active) Tutor.active.resolve();
   };
   Tutor.offlineAnswer = offlineAnswer; Tutor.md = md; Tutor._calc = { calcOhm, calcLed, calcDivider, calcRC, calcSeriesParallel, calcColor, calcCutoff, calcRL, calcBase };

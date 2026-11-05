@@ -1,7 +1,7 @@
 {
   "name": "smart21-electrolab",
   "productName": "Smart21 ElectroLab",
-  "version": "1.8.0",
+  "version": "1.9.3",
   "description": "Desktop emulator for studying Arduino and electronics: circuit simulator, Arduino Uno sketch emulator, lessons and an AI tutor.",
   "main": "main.js",
   "author": "Smart21",
@@ -14,11 +14,14 @@
     "dist:mac": "electron-builder --mac",
     "dist:linux": "electron-builder --linux",
     "pwa": "node scripts/make-pwa.js",
-    "dist:all": "electron-builder --win --linux"
+    "dist:all": "electron-builder --win --linux",
+    "deploy": "node scripts/make-pwa.js && wrangler deploy",
+    "dev:cf": "wrangler dev"
   },
   "devDependencies": {
     "electron": "^33.2.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "wrangler": "^4.0.0"
   },
   "build": {
     "appId": "com.smart21.electrolab",
