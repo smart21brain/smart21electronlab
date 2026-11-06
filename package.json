@@ -1,7 +1,7 @@
 {
   "name": "smart21-electrolab",
   "productName": "Smart21 ElectroLab",
-  "version": "1.8.2",
+  "version": "1.8.4",
   "description": "Desktop emulator for studying Arduino and electronics: circuit simulator, Arduino Uno sketch emulator, lessons and an AI tutor.",
   "main": "main.js",
   "author": "Smart21",
