@@ -288,7 +288,7 @@
         <h1>Settings</h1>
         <div class="card-box">
           <h2>AI tutor engine</h2>
-          <p class="soft">The built-in tutor works offline with no account. For free-form answers, connect an AI service: Workers AI (web version, no key needed), Anthropic (Claude), any OpenAI-compatible service, or a local model such as Ollama.</p>
+          <p class="soft">Smart21 AI (Workers AI) answers automatically whenever you are online, and the built-in offline tutor takes over when you are not. You can also connect your own service: Anthropic (Claude), any OpenAI-compatible service, or a local model such as Ollama.</p>
           <label>Engine
             <select id="setProvider"><option value="offline">Built-in offline tutor</option><option value="cloudflare" id="optCf" hidden>Workers AI</option><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI-compatible / local (Ollama, LM Studio…)</option></select>
           </label>
@@ -298,7 +298,7 @@
             <label id="setKeyRow">API key <input id="setKey" type="password" placeholder="Paste key (stored encrypted on this PC)" autocomplete="off"><span class="soft" id="setKeyState"></span></label>
           </div>
           <div class="row"><button class="btn primary" id="setSave">Save</button><button class="btn" id="setForget">Remove stored key</button><button class="btn" id="setTest" hidden>Test connection</button><span class="soft" id="setMsg"></span></div>
-          <p class="soft small">Your key is encrypted with the operating system’s secure storage and only used from the app’s background process. Nothing is sent anywhere until you choose an online engine and send a message.</p>
+          <p class="soft small">Your key is encrypted with the operating system’s secure storage and only used from the app’s background process. Your questions (and the circuit you attach) are sent to the AI service only when you ask the tutor while online. Choose “Built-in offline tutor” to keep everything on this computer.</p>
         </div>
         <div class="card-box">
           <h2>Simulator</h2>

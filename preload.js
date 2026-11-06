@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('s21', {
   importSketch: () => ipcRenderer.invoke('sketch:import'),
   aiStart: (req) => ipcRenderer.send('ai:start', req),
   aiAbort: (id) => ipcRenderer.send('ai:abort', id),
+  aiTest: (base) => ipcRenderer.invoke('ai:test', String(base || '')),
   onAi: (cb) => { ipcRenderer.on('ai:event', (_e, ev) => cb(ev)); },
   onMenu: (cb) => { ipcRenderer.on('menu:action', (_e, a) => cb(a)); }
 });

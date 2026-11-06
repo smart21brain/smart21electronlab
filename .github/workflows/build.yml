@@ -1,6 +1,6 @@
 name: Build installers
 # Builds the Windows, macOS and Linux installers online, so you do not need to install anything.
-# Run it from the "Actions" tab (Run workflow) or push a tag such as v1.8.0.
+# Run it from the "Actions" tab (Run workflow) or push a tag such as v1.0.0.
 on:
   workflow_dispatch:
   push:

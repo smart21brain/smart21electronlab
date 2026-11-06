@@ -30,17 +30,17 @@
     const api = window.s21, prov = $('#setProvider');
     const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2', cloudflare: 'auto (recommended) · fast · expert · or any @cf/... model' };
     const web = !api && /^https?:$/.test(location.protocol);
-    if (web) { $('#optCf').hidden = false; ['anthropic', 'openai'].forEach(v => { const o = prov.querySelector('option[value="' + v + '"]'); if (o) o.remove(); }); } else $('#optCf').remove();
+    $('#optCf').hidden = false; if (web) ['anthropic', 'openai'].forEach(v => { const o = prov.querySelector('option[value="' + v + '"]'); if (o) o.remove(); });
     const sync = () => {
       const p = prov.value; $('#setOnline').style.display = p === 'offline' ? 'none' : ''; $('#setKeyRow').style.display = p === 'cloudflare' ? 'none' : '';
-      $('#setBaseRow').style.display = (p === 'openai' || p === 'cloudflare') ? '' : 'none'; $('#setBase').placeholder = p === 'cloudflare' ? 'Leave EMPTY when the Worker serves this same website. Otherwise: https://your-worker.workers.dev' : 'https://api.openai.com/v1  or  http://localhost:11434/v1';
-      $('#setModel').placeholder = PH[p] || '';
+      $('#setBaseRow').style.display = (p === 'openai' || p === 'cloudflare') ? '' : 'none'; $('#setBase').placeholder = p === 'cloudflare' ? (web ? 'Leave EMPTY when the Worker serves this same website. Otherwise: https://your-worker.workers.dev' : 'Leave EMPTY to use Smart21 AI, or paste your own Worker address') : 'https://api.openai.com/v1  or  http://localhost:11434/v1';
+      $('#setModel').placeholder = PH[p] || ''; $('#setTest').hidden = !(p === 'cloudflare' && (web || (api && api.aiTest)));
     };
-    prov.onchange = sync;
+    prov.onchange = () => { if (api) $('#setBase').value = (prov.value === 'cloudflare' ? s.worker : s.apiBase) || ''; if (prov.value === 'cloudflare' && !$('#setModel').value) $('#setModel').value = 'auto'; sync(); };
     let s = { provider: 'offline', model: '', base: '', hasKey: false };
     if (api && api.getSettings) s = await api.getSettings();
     else if (web) { try { s = Object.assign({ provider: 'cloudflare', model: '', base: '', hasKey: false }, JSON.parse(localStorage.getItem('s21lab-web-ai') || '{}')); } catch (_) { s.provider = 'cloudflare'; } }
-    prov.value = s.provider; $('#setModel').value = s.model || (web ? 'auto' : ''); $('#setBase').value = (web ? s.url : s.base) || '';
+    prov.value = s.provider; $('#setModel').value = s.model || ((web || s.provider === 'cloudflare') ? 'auto' : ''); $('#setBase').value = (web ? s.url : s.base) || '';
     $('#setKeyState').textContent = s.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : (s.encrypted === false && s.provider !== 'offline' ? 'Note: secure storage is unavailable on this system.' : '');
     sync();
     if (web) { try { fetch(S21.Tutor.cleanBase($('#setBase').value) + '/api/ai').then(r => r.json()).then(j => { const dl = $('#cfModels'); (j.models || []).forEach(m => { if (![...dl.options].some(o => o.value === m)) { const o = document.createElement('option'); o.value = m; dl.appendChild(o); } }); }).catch(() => {}); } catch (_) {} }
@@ -49,10 +49,10 @@
       if (!api) { $('#setMsg').textContent = 'Online engines are available in the desktop app.'; return; }
       const r = await api.setSettings({ provider: prov.value, model: $('#setModel').value.trim(), base: $('#setBase').value.trim(), key: $('#setKey').value.trim() || undefined });
       $('#setKey').value = ''; $('#setMsg').textContent = r && r.ok ? 'Saved ✓' : 'Could not save: ' + (r && r.error || 'unknown error');
-      const ns = await api.getSettings(); $('#setKeyState').textContent = ns.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : '';
+      const ns = await api.getSettings(); s = ns; $('#setKeyState').textContent = ns.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : '';
       S21.Tutor.refreshSettings();
     };
-    $('#setTest').hidden = !web; $('#setTest').onclick = async () => { const m = $('#setMsg'); m.textContent = 'Testing…'; try { const r = await S21.Tutor.testConnection($('#setBase').value); m.textContent = r.msg; m.style.color = r.ok ? '' : 'var(--danger, #d64545)'; if (r.clear) { $('#setBase').value = ''; S21.Tutor.webSave(prov.value, $('#setModel').value.trim(), ''); S21.Tutor.refreshSettings(); } } catch (e) { m.textContent = '✗ ' + (e.message || e); } };
+    $('#setTest').onclick = async () => { const m = $('#setMsg'); m.textContent = 'Testing…'; try { const r = api && api.aiTest ? await api.aiTest($('#setBase').value) : await S21.Tutor.testConnection($('#setBase').value); m.textContent = r.msg; m.style.color = r.ok ? '' : 'var(--danger, #d64545)'; if (r.clear) { $('#setBase').value = ''; S21.Tutor.webSave(prov.value, $('#setModel').value.trim(), ''); S21.Tutor.refreshSettings(); } } catch (e) { m.textContent = '✗ ' + (e.message || e); } };
     $('#setForget').onclick = async () => { if (api) { await api.setSettings({ clearKey: true }); $('#setKeyState').textContent = ''; $('#setMsg').textContent = 'Key removed.'; S21.Tutor.refreshSettings(); } };
     const snd = $('#setSound'); snd.onchange = () => S21.Lab.setSound(snd.checked);
     $('#setHints').onchange = e => { if (!e.target.checked) $('#hoverInfo').style.display = 'none'; else $('#hoverInfo').style.display = ''; };

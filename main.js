@@ -18,17 +18,27 @@ function getKey(s) {
 }
 
 ipcMain.handle('app:version', () => app.getVersion());
+/* Workers AI = "Smart21 AI": the default engine. It answers whenever the computer is online; the renderer drops back to the
+   built-in offline tutor by itself when there is no internet (or the service is unavailable). */
+const DEFAULT_WORKER = 'https://smart21electronlab.smart21brain.com';
+function cleanWorker(u) {
+  u = String(u || '').trim().replace(/[\s.,;:]+$/, ''); if (!u) return DEFAULT_WORKER;
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, '');
+  u = u.replace(/\/+$/, '').replace(/\/api\/ai$/i, '').replace(/[\s.,;:\/]+$/, '');
+  if (/^http:\/\//i.test(u) && !/^http:\/\/(localhost|127\.0\.0\.1)/i.test(u)) u = 'https://' + u.slice(7);
+  return u;
+}
 ipcMain.handle('settings:get', () => {
-  const s = readSettings();
-  return { provider: s.provider || 'offline', model: s.model || '', base: s.base || '', hasKey: !!s.key, encrypted: safeStorage.isEncryptionAvailable() };
+  const s = readSettings(), provider = s.provider || 'cloudflare';
+  return { provider, model: s.model || '', base: provider === 'cloudflare' ? (s.worker || '') : (s.base || ''), worker: s.worker || '', apiBase: s.base || '', hasKey: !!s.key, encrypted: safeStorage.isEncryptionAvailable() };
 });
 ipcMain.handle('settings:set', (_e, patch) => {
   try {
     const s = readSettings();
     if (patch && typeof patch === 'object') {
-      if (['offline', 'anthropic', 'openai'].includes(patch.provider)) s.provider = patch.provider;
+      if (['offline', 'cloudflare', 'anthropic', 'openai'].includes(patch.provider)) s.provider = patch.provider;
       if (typeof patch.model === 'string') s.model = patch.model.slice(0, 120);
-      if (typeof patch.base === 'string') s.base = patch.base.slice(0, 300);
+      if (typeof patch.base === 'string') { if ((s.provider || 'cloudflare') === 'cloudflare') s.worker = patch.base.trim().slice(0, 300); else s.base = patch.base.slice(0, 300); }
       if (patch.clearKey) { delete s.key; delete s.keyEnc; }
       if (typeof patch.key === 'string' && patch.key) {
         if (safeStorage.isEncryptionAvailable()) { s.key = safeStorage.encryptString(patch.key).toString('base64'); s.keyEnc = true; }
@@ -38,6 +48,20 @@ ipcMain.handle('settings:set', (_e, patch) => {
     writeSettings(s);
     return { ok: true };
   } catch (e) { return { ok: false, error: e.message }; }
+});
+// "Test connection" for Smart21 AI (the renderer is not allowed to use the network, so the main process does it)
+ipcMain.handle('ai:test', async (_e, base) => {
+  const ep = cleanWorker(base) + '/api/ai', ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const g = await fetch(ep, { signal: ctl.signal, cache: 'no-store' }); let j = null; try { j = await g.json(); } catch (_) {}
+    if (!g.ok || !j) return { ok: false, msg: '✗ ' + ep + ' answered ' + g.status + ' but it is not the Smart21 Worker.' };
+    if (j.ai !== true) return { ok: false, msg: '✗ The Worker answers, but the Workers AI binding named AI is missing (or it is an older Worker). Redeploy it from the project.' };
+    const p = await fetch(ep, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: 'fast', system: 'Reply with the single word OK.', messages: [{ role: 'user', content: 'ping' }] }) });
+    if (!p.ok) { let d = ''; try { d = (await p.json()).error || ''; } catch (_) {} return { ok: false, msg: '✗ The Worker answers but the AI failed (' + p.status + (d ? ': ' + d : '') + ').' }; }
+    try { await p.body.cancel(); } catch (_) {}
+    return { ok: true, msg: '✓ Connected. Smart21 AI is ready (' + ep + ').' };
+  } catch (e) { return { ok: false, msg: '✗ Cannot reach ' + ep + ' (' + ((e && e.cause && e.cause.code) || (e && e.message) || 'error') + '). Check your internet connection.' }; }
+  finally { clearTimeout(to); }
 });
 
 /* ----------------------------- projects ----------------------------- */
@@ -115,15 +139,22 @@ async function readSSE(res, onData, signal) {
 ipcMain.on('ai:start', async (_e, req) => {
   const id = req && req.id; if (typeof id !== 'number') return;
   const ctl = new AbortController(); aiJobs.set(id, ctl);
+  let timedOut = false, gotChunk = false, provider = 'cloudflare';
+  const emit = t => { if (t) { gotChunk = true; send({ id, type: 'chunk', text: t }); } };
   try {
     const s = readSettings(), key = getKey(s);
-    const provider = ['anthropic', 'openai'].includes(req.provider) ? req.provider : s.provider;
+    provider = ['anthropic', 'openai', 'cloudflare'].includes(req.provider) ? req.provider : (s.provider || 'cloudflare');
     const model = String(req.model || s.model || '').trim();
     const messages = (Array.isArray(req.messages) ? req.messages : []).slice(-20).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '').slice(0, 24000) }));
     if (!messages.length) throw new Error('Nothing to send.');
     const system = String(req.system || '').slice(0, 12000);
     let res;
-    if (provider === 'anthropic') {
+    if (provider === 'cloudflare') {
+      const ep = cleanWorker(req.base || s.worker) + '/api/ai', to = setTimeout(() => { timedOut = true; ctl.abort(); }, 20000);
+      try {
+        res = await fetch(ep, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: /^@cf\/|^(auto|fast|expert)$/i.test(model) ? model : 'auto', mode: String(req.mode || ''), ctx: !!req.ctx, system, messages }) });
+      } finally { clearTimeout(to); }
+    } else if (provider === 'anthropic') {
       if (!key) throw new Error('No API key saved for Anthropic.');
       res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', signal: ctl.signal,
@@ -147,16 +178,26 @@ ipcMain.on('ai:start', async (_e, req) => {
       if (!data || data === '[DONE]') return;
       let j; try { j = JSON.parse(data); } catch (_) { return; }
       if (provider === 'anthropic') {
-        if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') send({ id, type: 'chunk', text: j.delta.text });
+        if (j.type === 'content_block_delta' && j.delta && j.delta.type === 'text_delta') emit(j.delta.text);
         else if (j.type === 'error') throw new Error((j.error && j.error.message) || 'Stream error');
+      } else if (provider === 'cloudflare') {
+        emit(typeof j.response === 'string' ? j.response : ((j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) || ''));
       } else {
-        const d = j.choices && j.choices[0] && j.choices[0].delta; if (d && d.content) send({ id, type: 'chunk', text: d.content });
+        const d = j.choices && j.choices[0] && j.choices[0].delta; if (d && d.content) emit(d.content);
       }
     }, ctl.signal);
     send({ id, type: 'done' });
   } catch (e) {
-    if (ctl.signal.aborted) send({ id, type: 'done' });
-    else send({ id, type: 'error', message: e && e.cause && e.cause.code === 'ECONNREFUSED' ? 'Could not connect. Is the local model server running?' : (e.message || String(e)) });
+    if (ctl.signal.aborted && !timedOut) send({ id, type: 'done' });
+    else {
+      const code = e && e.cause && e.cause.code, msg = e && e.message ? e.message : String(e);
+      const ev = { id, type: 'error', message: code === 'ECONNREFUSED' && provider !== 'cloudflare' ? 'Could not connect. Is the local model server running?' : msg };
+      if (provider === 'cloudflare' && !gotChunk) {         // nothing was shown yet: let the app answer with the offline tutor instead
+        const net = timedOut || e instanceof TypeError || /fetch failed|ENOTFOUND|ECONN|ETIMEDOUT|EAI_AGAIN|ENETUNREACH/i.test(msg + ' ' + code);
+        ev.fallback = true; ev.message = net ? 'No internet connection to Smart21 AI' : 'Smart21 AI is not available right now (' + msg.slice(0, 120) + ')';
+      }
+      send(ev);
+    }
   } finally { aiJobs.delete(id); }
 });
 ipcMain.on('ai:abort', (_e, id) => { const c = aiJobs.get(id); if (c) c.abort(); });

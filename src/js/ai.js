@@ -347,7 +347,8 @@
   const WEB = !root.s21 && /^https?:$/.test(root.location.protocol);
   const WKEY = 's21lab-web-ai';
   const webCfg = () => { try { return Object.assign({ provider: 'cloudflare', model: '' }, JSON.parse(localStorage.getItem(WKEY) || '{}')); } catch (_) { return { provider: 'cloudflare', model: '' }; } };
-  const canOnline = () => Tutor.settings.provider !== 'offline' && ((root.s21 && root.s21.aiStart) || (WEB && Tutor.settings.provider === 'cloudflare'));
+  const isOnline = () => root.navigator.onLine !== false;
+  const canOnline = () => Tutor.settings.provider !== 'offline' && ((root.s21 && root.s21.aiStart) || (WEB && Tutor.settings.provider === 'cloudflare')) && (Tutor.settings.provider !== 'cloudflare' || isOnline());
   /* "smart21.me", "https://smart21.me/", "https://x.workers.dev/api/ai"  →  "https://smart21.me"  (empty = this same website) */
   const cleanBase = u => { u = String(u || '').trim().replace(/[\s.,;:]+$/, ''); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); return u.replace(/\/+$/, '').replace(/\/api\/ai$/i, '').replace(/[\s.,;:\/]+$/, ''); };
   Tutor.cleanBase = cleanBase;
@@ -444,6 +445,7 @@
       if (ctl.signal.aborted) { a.resolve(); return; }
       const netFail = e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(String(e && e.message));
       let cors = false; if (netFail && !ctl.signal.aborted && !endpoint.startsWith('/')) { try { await fetch(endpoint, { mode: 'no-cors', cache: 'no-store' }); cors = true; } catch (_) {} }
+      if (netFail && !cors && !a.reply.t && !ctl.signal.aborted && fallbackOffline(a, isOnline() ? 'Smart21 AI could not be reached' : 'No internet connection')) return;
       a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + (cors ? 'Smart21 AI is blocked by the browser (CORS). The Worker at ' + endpoint + ' is alive but it is an **old version** without permission for this website. Redeploy the latest `worker/index.js` from the project (`npm run cf:deploy`, or Cloudflare → your Worker → Edit code → paste it → Deploy), then try again.' : netFail ? 'Smart21 AI could not be reached (' + (endpoint.startsWith('/') ? location.origin + endpoint : endpoint) + '). Check your internet, then open **Settings → AI tutor engine** and press **Test connection** to see exactly what is wrong.' : (e.message || e) + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'); a.bub.innerHTML = md(a.reply.t); a.resolve();
     }
   }
@@ -505,10 +507,10 @@
   const scroll = () => { const s = $('#aiStage'); s.scrollTop = s.scrollHeight; };
   function renderAll() { renderHistory(); renderThread(); updateEngineLabel(); }
   function updateEngineLabel() {
-    const s = Tutor.settings; let label = 'Smart21 Tutor · offline';
+    const s = Object.assign({}, Tutor.settings); if (s.provider === 'cloudflare' && !isOnline()) s.provider = 'offline'; let label = 'Smart21 Tutor · offline';
     if (s.provider === 'cloudflare') label = 'Smart21 AI'; else if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
     $('#aiEngine').textContent = label; Tutor.engineLabel = label; (Tutor.onEngine || []).forEach(fn => { try { fn(label, s); } catch (_) {} });
-    $('#aiFine').textContent = s.provider === 'offline' ? 'Offline tutor: great for calculations and the basics. Connect an online AI in Settings for open-ended questions.' : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
+    $('#aiFine').textContent = s.provider === 'offline' ? (Tutor.settings.provider === 'cloudflare' ? 'No internet: the built-in offline tutor is answering. Smart21 AI comes back automatically when you are online.' : 'Offline tutor: great for calculations and the basics. Choose Smart21 AI (Workers AI) in Settings for open-ended questions.') : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
   }
 
   const SYSTEM = [
@@ -549,6 +551,17 @@
       setTimeout(tick, 250);
     });
   }
+  /* Smart21 AI could not answer (no internet / service down) and nothing was shown yet: answer with the built-in offline tutor. */
+  function fallbackOffline(a, why) {
+    const f = a.fb; if (!f) return false;
+    if (Tutor.active && Tutor.active.id === a.id) Tutor.active = null;
+    a.reply.t = '';
+    offline(f.text, f.mode, f.chat, f.wantCtx, a.reply, a.bub).then(() => {
+      a.reply.t = '📴 ' + (why || 'Smart21 AI could not be reached') + ', so the built-in offline tutor answered. Smart21 AI comes back automatically when it is available.\n\n' + a.reply.t;
+      a.bub.innerHTML = md(a.reply.t); a.resolve();
+    }, () => a.resolve());
+    return true;
+  }
   function online(chat, mode, wantCtx, reply, bub) {
     return new Promise((resolve, reject) => {
       const s = Tutor.settings, id = ++Tutor.reqId;
@@ -562,8 +575,9 @@
           + (wantCtx && S21.Lab ? '\n\n[Student’s current lab state]\n' + S21.Lab.describeCircuit() : '')
           + (df ? '\n\n[Circuit doctor findings: problems the app really detected]\n' + df : '');
       }
-      Tutor.active = { id, resolve, reject, bub, reply };
-      if (root.s21 && root.s21.aiStart) root.s21.aiStart({ id, provider: s.provider, model: s.model, base: s.base, system: SYSTEM, messages: hist });
+      const lastU = chat.msgs.slice().reverse().find(m => m.r === 'u');
+      Tutor.active = { id, resolve, reject, bub, reply, fb: { text: lastU ? lastU.t : '', mode: mode || '', chat, wantCtx } };
+      if (root.s21 && root.s21.aiStart) root.s21.aiStart({ id, provider: s.provider, model: s.model, base: s.base, mode: mode || '', ctx: !!wantCtx, system: SYSTEM, messages: hist });
       else webAI(id, { model: s.model, mode: mode || '', ctx: !!wantCtx, system: SYSTEM, messages: hist }, Tutor.active);
     });
   }
@@ -590,12 +604,14 @@
       const t = inp.value; inp.value = ''; inp.style.height = 'auto'; send(t);
     });
     $('#aiModes').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; Tutor.mode = b.dataset.mode; document.querySelectorAll('#aiModes button').forEach(x => x.classList.toggle('on', x === b)); inp.focus(); });
+    root.addEventListener('online', updateEngineLabel); root.addEventListener('offline', updateEngineLabel);
     $('#aiNew').onclick = newChat; $('#aiSearch').addEventListener('input', renderHistory); $('#aiCtx').addEventListener('change', updateEngineLabel);
     $('#aiClear').onclick = () => { if (confirm('Delete all tutor chats?')) { Tutor.chats = []; Tutor.cur = null; save(); newChat(); } };
     if (window.s21 && window.s21.onAi) window.s21.onAi(ev => {
       const a = Tutor.active; if (!a || ev.id !== a.id) return;
       if (ev.type === 'chunk') { a.reply.t += ev.text; paint(a); }
       else if (ev.type === 'done') { Tutor.active = null; finish(a); }
+      else if (ev.type === 'error' && ev.fallback && !a.reply.t && fallbackOffline(a, ev.message)) { /* answered by the offline tutor */ }
       else if (ev.type === 'error') { Tutor.active = null; a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + ev.message + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'; a.bub.innerHTML = md(a.reply.t); a.resolve(); }
     });
     Tutor.cur = Tutor.chats.find(c => c.msgs.length) || null; if (!Tutor.cur) newChat(); else renderAll();
