@@ -355,7 +355,11 @@
   async function probe(ep) {
     const where = ep.startsWith('/') ? location.origin + ep : ep; let r;
     try { r = await fetch(ep, { method: 'GET', cache: 'no-store' }); }
-    catch (e) { return { ok: false, net: true, msg: '✗ The browser cannot reach ' + where + ' (no answer at all). The address does not point to a running Worker: wrong address, DNS/route not set, or the Worker is not deployed.' }; }
+    catch (e) {
+      let alive = false; try { await fetch(ep, { mode: 'no-cors', cache: 'no-store' }); alive = true; } catch (_) {}
+      if (alive) return { ok: false, cors: true, msg: '✗ ' + 'The Worker is alive (it opens in a tab) but the browser blocks this website from using it (CORS). The Worker you deployed is an OLD version. Redeploy the latest worker/index.js from this project: run "npm run cf:deploy", or Cloudflare → your Worker → Edit code → paste worker/index.js → Deploy. If you set ALLOWED_ORIGINS, it must be empty or contain ' + location.origin + '.' };
+      return { ok: false, net: true, msg: '✗ The browser cannot reach ' + where + ' (no answer at all). The address does not point to a running Worker: wrong address, DNS/route not set, or the Worker is not deployed.' };
+    }
     let j = null; try { j = await r.json(); } catch (_) {}
     if (r.status === 403) return { ok: false, msg: '✗ The Worker refused this website (ALLOWED_ORIGINS in wrangler.jsonc). Add: ' + location.origin };
     if (!r.ok || !j) return { ok: false, msg: '✗ ' + where + ' answered ' + r.status + ' but it is not the Smart21 Worker: this website is served by something else (Pages or another host), so /api/ai does not exist there. Deploy this project with "npm run cf:deploy".' };
@@ -369,7 +373,7 @@
   }
   Tutor.testConnection = async function (rawUrl) {
     const custom = cleanBase(rawUrl), first = await probe(custom + '/api/ai');
-    if (first.ok || !custom || !first.net) return first;
+    if (first.ok || !custom || !(first.net || first.cors)) return first;
     const own = await probe('/api/ai');                       // the typed address is dead: does this website itself have the Worker?
     if (own.ok) return { ok: true, clear: true, msg: '✓ Smart21 AI works on this website itself. The address you typed does not answer, so I cleared it. Leave the Worker URL box EMPTY.' };
     return { ok: false, msg: first.msg + '  Also, this website (' + location.origin + ') has no working /api/ai: ' + own.msg.replace(/^✗ /, '') };
@@ -439,7 +443,8 @@
       if (Tutor.active && Tutor.active.id === id) Tutor.active = null;
       if (ctl.signal.aborted) { a.resolve(); return; }
       const netFail = e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(String(e && e.message));
-      a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + (netFail ? 'Smart21 AI could not be reached (' + (endpoint.startsWith('/') ? location.origin + endpoint : endpoint) + '). Check your internet, then open **Settings → AI tutor engine** and press **Test connection** to see exactly what is wrong.' : (e.message || e) + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'); a.bub.innerHTML = md(a.reply.t); a.resolve();
+      let cors = false; if (netFail && !ctl.signal.aborted && !endpoint.startsWith('/')) { try { await fetch(endpoint, { mode: 'no-cors', cache: 'no-store' }); cors = true; } catch (_) {} }
+      a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + (cors ? 'Smart21 AI is blocked by the browser (CORS). The Worker at ' + endpoint + ' is alive but it is an **old version** without permission for this website. Redeploy the latest `worker/index.js` from the project (`npm run cf:deploy`, or Cloudflare → your Worker → Edit code → paste it → Deploy), then try again.' : netFail ? 'Smart21 AI could not be reached (' + (endpoint.startsWith('/') ? location.origin + endpoint : endpoint) + '). Check your internet, then open **Settings → AI tutor engine** and press **Test connection** to see exactly what is wrong.' : (e.message || e) + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'); a.bub.innerHTML = md(a.reply.t); a.resolve();
     }
   }
   const abortActive = () => { const a = Tutor.active; if (!a) return; if (a.ctl) a.ctl.abort(); else if (root.s21 && root.s21.aiAbort) root.s21.aiAbort(a.id); };
