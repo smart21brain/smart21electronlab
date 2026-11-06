@@ -352,21 +352,27 @@
   const cleanBase = u => { u = String(u || '').trim().replace(/[\s.,;:]+$/, ''); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); return u.replace(/\/+$/, '').replace(/\/api\/ai$/i, '').replace(/[\s.,;:\/]+$/, ''); };
   Tutor.cleanBase = cleanBase;
   Tutor.webSave = (provider, model, url) => { try { localStorage.setItem(WKEY, JSON.stringify({ provider: provider === 'offline' ? 'offline' : 'cloudflare', model: model || '', url: cleanBase(url) })); } catch (_) {} };
-  Tutor.testConnection = async function (rawUrl) {
-    const ep = cleanBase(rawUrl) + '/api/ai', where = ep.startsWith('/') ? location.origin + ep : ep;
-    let r;
+  async function probe(ep) {
+    const where = ep.startsWith('/') ? location.origin + ep : ep; let r;
     try { r = await fetch(ep, { method: 'GET', cache: 'no-store' }); }
-    catch (e) { return { ok: false, msg: '✗ The browser cannot reach ' + where + '. Most likely: the address is wrong, the Worker is not deployed, or the Worker is not the Smart21 Worker (browser blocks it because it has no CORS headers). Open that address in a new tab to check.' }; }
+    catch (e) { return { ok: false, net: true, msg: '✗ The browser cannot reach ' + where + ' (no answer at all). The address does not point to a running Worker: wrong address, DNS/route not set, or the Worker is not deployed.' }; }
     let j = null; try { j = await r.json(); } catch (_) {}
-    if (r.status === 403) return { ok: false, msg: '✗ The Worker refused this website (ALLOWED_ORIGINS in wrangler.jsonc). Add this site: ' + location.origin };
-    if (!r.ok || !j) return { ok: false, msg: '✗ ' + where + ' answered ' + r.status + ' but it is not the Smart21 Worker. The site is probably served by Pages or another host, so /api/ai does not exist. Deploy with "npm run cf:deploy", or paste the Worker address in the Worker URL box.' };
-    if (j.ai !== true) return { ok: false, msg: '✗ The Worker is reached, but the Workers AI binding named AI is missing (or this is an older Worker). Redeploy the Worker from this project.' };
+    if (r.status === 403) return { ok: false, msg: '✗ The Worker refused this website (ALLOWED_ORIGINS in wrangler.jsonc). Add: ' + location.origin };
+    if (!r.ok || !j) return { ok: false, msg: '✗ ' + where + ' answered ' + r.status + ' but it is not the Smart21 Worker: this website is served by something else (Pages or another host), so /api/ai does not exist there. Deploy this project with "npm run cf:deploy".' };
+    if (j.ai !== true) return { ok: false, msg: '✗ The Worker answers, but the Workers AI binding named AI is missing (or it is an older Worker). Redeploy the Worker from this project.' };
     try {
       const ctl = new AbortController(), pr = await fetch(ep, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: 'fast', mode: '', system: 'Reply with the single word OK.', messages: [{ role: 'user', content: 'ping' }] }) });
-      if (!pr.ok) { let d = ''; try { d = (await pr.json()).error || ''; } catch (_) {} return { ok: false, msg: '✗ The Worker is reached but the AI failed (' + pr.status + (d ? ': ' + d : '') + '). Check the Workers AI binding and your Cloudflare daily allowance.' }; }
+      if (!pr.ok) { let d = ''; try { d = (await pr.json()).error || ''; } catch (_) {} return { ok: false, msg: '✗ The Worker answers but the AI failed (' + pr.status + (d ? ': ' + d : '') + '). Check the Workers AI binding and your Cloudflare daily allowance.' }; }
       await pr.body.getReader().read(); ctl.abort();
-    } catch (e) { if (!(e && e.name === 'AbortError')) return { ok: false, msg: '✗ The Worker is reached but the AI test failed: ' + (e.message || e) }; }
+    } catch (e) { if (!(e && e.name === 'AbortError')) return { ok: false, msg: '✗ The Worker answers but the AI test failed: ' + (e.message || e) }; }
     return { ok: true, msg: '✓ Connected. Smart21 AI is ready (' + where + ').' };
+  }
+  Tutor.testConnection = async function (rawUrl) {
+    const custom = cleanBase(rawUrl), first = await probe(custom + '/api/ai');
+    if (first.ok || !custom || !first.net) return first;
+    const own = await probe('/api/ai');                       // the typed address is dead: does this website itself have the Worker?
+    if (own.ok) return { ok: true, clear: true, msg: '✓ Smart21 AI works on this website itself. The address you typed does not answer, so I cleared it. Leave the Worker URL box EMPTY.' };
+    return { ok: false, msg: first.msg + '  Also, this website (' + location.origin + ') has no working /api/ai: ' + own.msg.replace(/^✗ /, '') };
   };
   /* ---- what the AI gets besides the question: exact calculator results + real circuit-doctor findings ---- */
   function verifiedFacts(text) {
@@ -401,9 +407,16 @@
   }
   async function webAI(id, req, a) {
     const ctl = new AbortController(); a.ctl = ctl;
-    const endpoint = cleanBase(Tutor.settings && Tutor.settings.url) + '/api/ai';
+    let endpoint = cleanBase(Tutor.settings && Tutor.settings.url) + '/api/ai';
     try {
-      const res = await fetch(endpoint, { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) });
+      const init = { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) };
+      let res;
+      try { res = await fetch(endpoint, init); }
+      catch (e0) {
+        if (endpoint === '/api/ai' || ctl.signal.aborted) throw e0;
+        endpoint = '/api/ai'; res = await fetch(endpoint, init);      // typed address is dead: use this website's own Worker
+        Tutor.settings.url = ''; Tutor.webSave(Tutor.settings.provider, Tutor.settings.model, '');
+      }
       if (!res.ok || !/event-stream/.test(res.headers.get('content-type') || '')) {
         let d = ''; try { const j = await res.json(); d = j.error || ''; } catch (_) {}
         if (res.status === 404 || res.status === 405 || (res.ok && !d)) throw new Error('The Worker was not found at ' + endpoint + ' (status ' + res.status + '). Deploy the Worker on this website, or enter its address in Settings → Worker URL.');

@@ -52,7 +52,7 @@
       const ns = await api.getSettings(); $('#setKeyState').textContent = ns.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : '';
       S21.Tutor.refreshSettings();
     };
-    $('#setTest').hidden = !web; $('#setTest').onclick = async () => { const m = $('#setMsg'); m.textContent = 'Testing…'; try { const r = await S21.Tutor.testConnection($('#setBase').value); m.textContent = r.msg; m.style.color = r.ok ? '' : 'var(--danger, #d64545)'; } catch (e) { m.textContent = '✗ ' + (e.message || e); } };
+    $('#setTest').hidden = !web; $('#setTest').onclick = async () => { const m = $('#setMsg'); m.textContent = 'Testing…'; try { const r = await S21.Tutor.testConnection($('#setBase').value); m.textContent = r.msg; m.style.color = r.ok ? '' : 'var(--danger, #d64545)'; if (r.clear) { $('#setBase').value = ''; S21.Tutor.webSave(prov.value, $('#setModel').value.trim(), ''); S21.Tutor.refreshSettings(); } } catch (e) { m.textContent = '✗ ' + (e.message || e); } };
     $('#setForget').onclick = async () => { if (api) { await api.setSettings({ clearKey: true }); $('#setKeyState').textContent = ''; $('#setMsg').textContent = 'Key removed.'; S21.Tutor.refreshSettings(); } };
     const snd = $('#setSound'); snd.onchange = () => S21.Lab.setSound(snd.checked);
     $('#setHints').onchange = e => { if (!e.target.checked) $('#hoverInfo').style.display = 'none'; else $('#hoverInfo').style.display = ''; };
