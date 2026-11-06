@@ -121,14 +121,14 @@ ipcMain.on('ai:start', async (_e, req) => {
     const model = String(req.model || s.model || '').trim();
     const messages = (Array.isArray(req.messages) ? req.messages : []).slice(-20).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '').slice(0, 24000) }));
     if (!messages.length) throw new Error('Nothing to send.');
-    const system = String(req.system || '').slice(0, 6000);
+    const system = String(req.system || '').slice(0, 12000);
     let res;
     if (provider === 'anthropic') {
       if (!key) throw new Error('No API key saved for Anthropic.');
       res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST', signal: ctl.signal,
         headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: model || 'claude-sonnet-5-5', max_tokens: 1800, system, messages, stream: true })
+        body: JSON.stringify({ model: model || 'claude-sonnet-5-5', max_tokens: 2500, system, messages, stream: true })
       });
     } else {
       let base = String(req.base || s.base || 'https://api.openai.com/v1').replace(/\/+$/, '');
@@ -137,7 +137,7 @@ ipcMain.on('ai:start', async (_e, req) => {
       if (!key && !local) throw new Error('No API key saved.');
       if (!model) throw new Error('Enter a model name in Settings.');
       const headers = { 'content-type': 'application/json' }; if (key) headers.authorization = 'Bearer ' + key;
-      res = await fetch(base + '/chat/completions', { method: 'POST', signal: ctl.signal, headers, body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages], stream: true, max_tokens: 1800 }) });
+      res = await fetch(base + '/chat/completions', { method: 'POST', signal: ctl.signal, headers, body: JSON.stringify({ model, messages: [{ role: 'system', content: system }, ...messages], stream: true, max_tokens: 2500 }) });
     }
     if (!res.ok) {
       let detail = ''; try { const j = await res.json(); detail = (j.error && (j.error.message || j.error)) || JSON.stringify(j).slice(0, 200); } catch (_) {}

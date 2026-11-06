@@ -349,6 +349,37 @@
   const webCfg = () => { try { return Object.assign({ provider: 'cloudflare', model: '' }, JSON.parse(localStorage.getItem(WKEY) || '{}')); } catch (_) { return { provider: 'cloudflare', model: '' }; } };
   const canOnline = () => Tutor.settings.provider !== 'offline' && ((root.s21 && root.s21.aiStart) || (WEB && Tutor.settings.provider === 'cloudflare'));
   Tutor.webSave = (provider, model, url) => { try { localStorage.setItem(WKEY, JSON.stringify({ provider: provider === 'offline' ? 'offline' : 'cloudflare', model: model || '', url: (url || '').trim().replace(/\/+$/, '') })); } catch (_) {} };
+  /* ---- what the AI gets besides the question: exact calculator results + real circuit-doctor findings ---- */
+  function verifiedFacts(text) {
+    try { for (const fn of [calc555, calcDivider, calcCutoff, calcBase, calcRL, calcRC, calcSeriesParallel, calcLed, calcColor, calcOhm]) { const r = fn(text); if (r) return String(r).slice(0, 1500); } } catch (_) {}
+    return '';
+  }
+  function doctorFacts() {
+    try {
+      const L = S21.Lab; if (!S21.Doctor || !L || !L.editor || !L.editor.circuit || !L.editor.circuit.parts.length) return '';
+      const c = L.editor.circuit; let f = S21.Doctor.analyze(c);
+      try { f = f.concat(S21.Doctor.analyzeRun(c, L.sketch || '', { ms: 800 })); } catch (_) {}
+      const seen = new Set(), lines = [];
+      for (const x of f) { if (seen.has(x.id)) continue; seen.add(x.id); lines.push('- [' + x.sev + '] ' + x.title + ': ' + x.text); if (lines.length >= 10) break; }
+      return lines.join('\n');
+    } catch (_) { return ''; }
+  }
+  /* ---- the model ends each answer with "FOLLOWUPS: a | b | c": turn that into clickable chips ---- */
+  function splitFollow(t) {
+    const m = /\n*[ \t]*\**FOLLOW-?UPS?:?\**[ \t]*([\s\S]*)$/i.exec(t); if (!m) return { text: t, chips: [] };
+    return { text: t.slice(0, m.index).trimEnd(), chips: m[1].split('|').map(x => x.replace(/[\r\n*_`]+/g, ' ').trim()).filter(x => x && x.length < 110).slice(0, 3) };
+  }
+  function paint(a) { a.bub.innerHTML = md(splitFollow(a.reply.t).text); scroll(); }
+  function finish(a) {
+    const sp = splitFollow(a.reply.t); a.reply.t = sp.text; a.bub.innerHTML = md(sp.text);
+    const old = a.bub.parentNode && a.bub.parentNode.querySelector('.aichips'); if (old) old.remove();
+    if (sp.chips.length && a.bub.closest('#aiStage') && a.bub.parentNode) {
+      const box = document.createElement('div'); box.className = 'aichips';
+      sp.chips.forEach(q => { const b = document.createElement('button'); b.type = 'button'; b.className = 'aichip'; b.textContent = q; b.onclick = () => { if (!Tutor.busy) { box.remove(); send(q); } }; box.appendChild(b); });
+      a.bub.parentNode.appendChild(box);
+    }
+    a.resolve();
+  }
   async function webAI(id, req, a) {
     const ctl = new AbortController(); a.ctl = ctl;
     try {
@@ -368,10 +399,10 @@
           if (!line.startsWith('data:')) continue; const d = line.slice(5).trim();
           if (d === '[DONE]') { fin = true; break; } let j; try { j = JSON.parse(d); } catch (_) { continue; }
           const t = typeof j.response === 'string' ? j.response : (j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content) || '';
-          if (t) { a.reply.t += t; a.bub.innerHTML = md(a.reply.t); scroll(); }
+          if (t) { a.reply.t += t; paint(a); }
         }
       }
-      if (Tutor.active && Tutor.active.id === id) Tutor.active = null; a.resolve();
+      if (Tutor.active && Tutor.active.id === id) Tutor.active = null; finish(a);
     } catch (e) {
       if (Tutor.active && Tutor.active.id === id) Tutor.active = null;
       if (ctl.signal.aborted) { a.resolve(); return; }
@@ -388,7 +419,10 @@
     ['🔍', 'Check my circuit', 'Find problems in my circuit and sketch', 'Check my circuit and sketch'],
     ['🧩', 'Explain my circuit', 'What is on the canvas and what does it do?', 'Explain my circuit'],
     ['💡', 'Write a sketch', 'A starter sketch for a blinking LED', 'Write a sketch that blinks an LED'],
-    ['🎯', 'Quiz me', 'Test what you have learned', 'Quiz me']
+    ['🎯', 'Quiz me', 'Test what you have learned', 'Quiz me'],
+    ['🛠️', 'Design a circuit', 'From your requirements to parts and wiring', 'Design a circuit that turns on a 12V fan when the temperature gets too high, powered from a 12V battery, controlled by an Arduino'],
+    ['🩺', 'Troubleshoot', 'Guided diagnosis with measurements', 'My LED circuit does not light. Guide me step by step to find the fault.'],
+    ['🧮', 'Hard calculation', 'Filters, transistors, power supplies', 'Design a first-order RC low-pass filter with a cutoff of 1 kHz and choose standard values']
   ];
 
   function newChat() { const c = { id: 'c' + Date.now(), title: 'New chat', ts: Date.now(), msgs: [] }; Tutor.chats.unshift(c); Tutor.cur = c; renderAll(); return c; }
@@ -434,12 +468,26 @@
   function renderAll() { renderHistory(); renderThread(); updateEngineLabel(); }
   function updateEngineLabel() {
     const s = Tutor.settings; let label = 'Smart21 Tutor · offline';
-    if (s.provider === 'cloudflare') label = 'Workers AI · ' + (s.model ? s.model.replace(/^@cf\//, '') : 'Llama 3.1'); else if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
+    if (s.provider === 'cloudflare') label = 'Workers AI · ' + (s.model && !/^auto$/i.test(s.model) ? s.model.replace(/^@cf\//, '') : 'auto (fast + expert)'); else if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
     $('#aiEngine').textContent = label; Tutor.engineLabel = label; (Tutor.onEngine || []).forEach(fn => { try { fn(label, s); } catch (_) {} });
     $('#aiFine').textContent = s.provider === 'offline' ? 'Offline tutor: great for calculations and the basics. Connect an online AI in Settings for open-ended questions.' : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
   }
 
-  const SYSTEM = 'You are the AI tutor inside Smart21 ElectroLab, a desktop emulator for learning electronics and Arduino (Uno). Students are beginners (age 10 and up). Be friendly, accurate and concise; explain step by step with small examples; use Markdown, and put code in fenced ```cpp blocks. Use SI units and show formulas. The lab has: a circuit canvas with battery, resistor, LED, capacitor, diode, NPN transistor, potentiometer, LDR, switch, button, buzzer, breadboard and Arduino Uno; a sketch editor running a subset of Arduino C++; a serial monitor; a scope. Safety first: mention current limits (Arduino pin 20 mA) and LED resistors. If the student shares their circuit or sketch, base your help on it and point out real mistakes. Never invent parts the lab does not have. If unsure, say so.';
+  const SYSTEM = [
+    "You are Smart21 AI, an expert electronics engineer and patient tutor inside Smart21 ElectroLab (a circuit simulator and Arduino Uno emulator). You can solve any electronics problem: theory, calculations, circuit design, troubleshooting, microcontrollers, power, sensors, motors, communication and PCB practice.",
+    "LANGUAGE: always answer in the language the user writes in (Swahili, English, French, Arabic...). Keep symbols and units standard (V, A, Ω, F, Hz).",
+    "LEVEL: adapt to the user. Beginners (age 10 and up) get plain words, a small analogy and short steps. Advanced users get concise engineering detail: tolerances, power ratings, trade-offs.",
+    "METHOD for every calculation or design: (1) restate what is asked and list the known values with units; (2) write the formula in plain text, for example V = I × R; (3) substitute and compute step by step, carefully; (4) sanity-check the result: units, power rating, current limits, voltage drop, nearest standard E12/E24 value, tolerance; (5) give the final answer clearly in bold. Never guess arithmetic: recompute it twice. A block that starts with [Verified by the built-in calculator] holds exact numbers: use them when they match the question and never contradict them.",
+    "TROUBLESHOOTING: think like a repair engineer. Safety first, then: symptom → most likely causes ranked by probability → specific multimeter or scope measurements, with the expected value at each test point → the fix → how to confirm it works. A [Circuit doctor findings] block lists problems the app really detected: explain them and how to fix them. Ask at most one or two short questions, and only if the answer really changes the diagnosis; otherwise state your assumptions and answer.",
+    "DESIGN: restate the requirements, choose the topology, calculate every value, give a bill of materials with standard values and ratings, describe the connections net by net, then give test steps and what to measure. Suggest protection and good practice when relevant (series resistor, decoupling capacitor, flyback diode, pull-up or pull-down, level shifting, fuse).",
+    "ARDUINO CODE: write complete, compilable sketches in ```cpp blocks with short comments. Use simple core functions (pinMode, digitalWrite, digitalRead, analogRead, analogWrite, millis, Serial, tone, Servo) so they run in the lab emulator; prefer millis() over delay() when several things happen at once; say so when a real-board-only library is needed. Explain how to wire it.",
+    "KNOWLEDGE: DC and AC analysis, Kirchhoff, Thevenin and Norton, resistors, capacitors, inductors, transformers, diodes, LEDs, Zener, BJT and MOSFET switching and amplifiers, op-amps, comparators, 555 timers, filters, logic gates and flip-flops, ADC and DAC, sensors, relays, motors and H-bridges, servos, linear and switching power supplies, batteries and charging, I2C, SPI, UART, CAN, Arduino, ESP32, STM32, Raspberry Pi Pico, PCB layout, grounding, EMI, soldering and test equipment.",
+    "THE LAB: the simulator has many parts (battery, resistor, capacitor, inductor, LED, diodes, transistors, MOSFET, op-amp, relay, motor, servo, sensors, switches, buzzer, breadboard, Arduino Uno and more). When the user shares the [lab state], use its exact part names (R1, LED1...) and point out real mistakes. Never invent a part that is not listed; if a real-world part is not in the lab, say so and suggest the closest alternative.",
+    "SAFETY: always warn about mains voltage (110/230 V), large capacitors, lithium batteries, reverse polarity and current limits (Arduino pin 20 mA typical, 40 mA absolute maximum). For mains or high-energy work explain the theory but tell the user to involve a qualified person. Do not help build anything meant to harm people or to bypass safety devices.",
+    "HONESTY: never invent part numbers, pinouts or datasheet values. If unsure, say so and tell the user to check the datasheet. If the question is ambiguous, state your assumption and continue.",
+    "FORMAT: Markdown, short paragraphs, headings only for long answers, tables for pinouts and value lists, formulas in plain text (no LaTeX). Be as short as the problem allows but complete.",
+    "FOLLOW-UPS: at the very end of every answer add one final line in exactly this form: FOLLOWUPS: first question | second question | third question   (three short, useful next questions the user may want to ask, in the user’s language). Write nothing after it."
+  ].join('\n');
 
   async function send(text, forcedMode) {
     if (Tutor.busy || !text.trim()) return;
@@ -468,11 +516,17 @@
       const s = Tutor.settings, id = ++Tutor.reqId;
       const hist = chat.msgs.slice(0, -1).slice(-16).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: m.t }));
       const last = hist[hist.length - 1];
-      const modeHint = { learn: 'The student wants a clear explanation.', calc: 'The student wants a calculation: show the formula and numbers.', debug: 'The student wants help debugging their circuit/sketch: find real problems.', quiz: 'Quiz the student with one multiple-choice question at a time.' }[mode];
-      if (last) last.content += (modeHint ? '\n\n[' + modeHint + ']' : '') + (wantCtx && S21.Lab ? '\n\n[Student’s current lab state]\n' + S21.Lab.describeCircuit() : '');
+      const modeHint = { learn: 'The user wants a clear explanation with an analogy and an example.', calc: 'The user wants a calculation: show the formula, every step, and a sanity check.', debug: 'The user wants help debugging their circuit/sketch: find the real problems, rank them, say how to fix each.', quiz: 'Quiz the user with one multiple-choice question at a time and wait for the answer.', design: 'The user wants a circuit designed: requirements, calculations, bill of materials, connections, test steps.', trouble: 'The user wants guided troubleshooting: ranked causes, exact measurements with expected values, the fix.', code: 'The user wants Arduino code: a complete sketch plus wiring.' }[mode];
+      if (last) {
+        const vf = last.role === 'user' ? verifiedFacts(last.content) : '', df = wantCtx ? doctorFacts() : '';
+        last.content += (modeHint ? '\n\n[' + modeHint + ']' : '')
+          + (vf ? '\n\n[Verified by the built-in calculator: exact results, use them if they match the question]\n' + vf : '')
+          + (wantCtx && S21.Lab ? '\n\n[Student’s current lab state]\n' + S21.Lab.describeCircuit() : '')
+          + (df ? '\n\n[Circuit doctor findings: problems the app really detected]\n' + df : '');
+      }
       Tutor.active = { id, resolve, reject, bub, reply };
       if (root.s21 && root.s21.aiStart) root.s21.aiStart({ id, provider: s.provider, model: s.model, base: s.base, system: SYSTEM, messages: hist });
-      else webAI(id, { model: s.model, system: SYSTEM, messages: hist }, Tutor.active);
+      else webAI(id, { model: s.model, mode: mode || '', ctx: !!wantCtx, system: SYSTEM, messages: hist }, Tutor.active);
     });
   }
   function setSend(busy) {
@@ -502,8 +556,8 @@
     $('#aiClear').onclick = () => { if (confirm('Delete all tutor chats?')) { Tutor.chats = []; Tutor.cur = null; save(); newChat(); } };
     if (window.s21 && window.s21.onAi) window.s21.onAi(ev => {
       const a = Tutor.active; if (!a || ev.id !== a.id) return;
-      if (ev.type === 'chunk') { a.reply.t += ev.text; a.bub.innerHTML = md(a.reply.t); scroll(); }
-      else if (ev.type === 'done') { Tutor.active = null; a.resolve(); }
+      if (ev.type === 'chunk') { a.reply.t += ev.text; paint(a); }
+      else if (ev.type === 'done') { Tutor.active = null; finish(a); }
       else if (ev.type === 'error') { Tutor.active = null; a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + ev.message + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'; a.bub.innerHTML = md(a.reply.t); a.resolve(); }
     });
     Tutor.cur = Tutor.chats.find(c => c.msgs.length) || null; if (!Tutor.cur) newChat(); else renderAll();
@@ -524,6 +578,6 @@
     abortActive();
     Tutor.busy = false; if (Tutor.active) Tutor.active.resolve();
   };
-  Tutor.offlineAnswer = offlineAnswer; Tutor.md = md; Tutor._calc = { calcOhm, calcLed, calcDivider, calcRC, calcSeriesParallel, calcColor, calcCutoff, calcRL, calcBase };
+  Tutor.offlineAnswer = offlineAnswer; Tutor.md = md; Tutor._calc = { calc555, calcOhm, calcLed, calcDivider, calcRC, calcSeriesParallel, calcColor, calcCutoff, calcRL, calcBase };
   if (typeof module !== 'undefined' && module.exports) module.exports = Tutor;
 })(typeof window !== 'undefined' ? window : globalThis);

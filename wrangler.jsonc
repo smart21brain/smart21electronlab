@@ -9,5 +9,10 @@
     "run_worker_first": ["/api/*"]
   },
   "ai": { "binding": "AI" },
-  "vars": { "AI_MODEL": "@cf/meta/llama-3.1-8b-instruct" }
+  "vars": {
+    // "auto" = fast model for simple questions, expert (70B) for design/debug/troubleshoot/code.
+    // Set ALLOWED_ORIGINS to "https://your-site.com" to stop other websites using your AI quota.
+    "AI_MODEL": "auto",
+    "ALLOWED_ORIGINS": ""
+  }
 }

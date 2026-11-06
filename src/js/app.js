@@ -28,7 +28,7 @@
 
   async function initSettings() {
     const api = window.s21, prov = $('#setProvider');
-    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2', cloudflare: '@cf/meta/llama-3.1-8b-instruct (default)' };
+    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2', cloudflare: 'auto (recommended) · fast · expert' };
     const web = !api && /^https?:$/.test(location.protocol);
     if (web) { $('#optCf').hidden = false; ['anthropic', 'openai'].forEach(v => { const o = prov.querySelector('option[value="' + v + '"]'); if (o) o.remove(); }); } else $('#optCf').remove();
     const sync = () => {

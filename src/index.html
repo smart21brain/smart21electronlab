@@ -235,7 +235,7 @@
         </div>
         <footer class="composer-wrap">
           <div class="modes" id="aiModes">
-            <button data-mode="" class="on">Auto</button><button data-mode="learn">Explain</button><button data-mode="calc">Calculate</button><button data-mode="debug">Debug</button><button data-mode="quiz">Quiz me</button>
+            <button data-mode="" class="on">Auto</button><button data-mode="learn">Explain</button><button data-mode="calc">Calculate</button><button data-mode="debug">Debug</button><button data-mode="design">Design</button><button data-mode="trouble">Troubleshoot</button><button data-mode="code">Arduino code</button><button data-mode="quiz">Quiz me</button>
           </div>
           <form class="composer" id="aiForm"><textarea id="aiInput" rows="1" maxlength="4000" placeholder="Message the tutor…" aria-label="Message the tutor"></textarea><button type="submit" class="send" id="aiSend" aria-label="Send" disabled><svg class="ic"><use href="#i-send"/></svg></button></form>
           <p class="fine" id="aiFine">The tutor can make mistakes. Check important answers.</p>
@@ -254,7 +254,7 @@
             <select id="setProvider"><option value="offline">Built-in offline tutor</option><option value="cloudflare" id="optCf" hidden>Cloudflare Workers AI (free, no key)</option><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI-compatible / local (Ollama, LM Studio…)</option></select>
           </label>
           <div id="setOnline">
-            <label>Model <input id="setModel" placeholder="claude-sonnet-5-5"></label>
+            <label>Model <input id="setModel" list="cfModels" placeholder="claude-sonnet-5-5"></label><datalist id="cfModels"><option value="auto"></option><option value="fast"></option><option value="expert"></option></datalist>
             <label id="setBaseRow">Base URL / Worker URL <input id="setBase" placeholder="https://api.openai.com/v1  or  http://localhost:11434/v1"></label>
             <label id="setKeyRow">API key <input id="setKey" type="password" placeholder="Paste key (stored encrypted on this PC)" autocomplete="off"><span class="soft" id="setKeyState"></span></label>
           </div>
