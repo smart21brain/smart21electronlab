@@ -1,7 +1,7 @@
 {
   "name": "Smart21 ElectroLab",
   "short_name": "ElectroLab",
-  "description": "Circuit simulator and Arduino emulator for studying electronics",
+  "description": "Free Arduino simulator, circuit lab and AI electronics tutor for learning electronics",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -34,5 +34,12 @@
         ]
       }
     }
+  ],
+  "id": "./",
+  "lang": "en",
+  "categories": [
+    "education",
+    "utilities",
+    "productivity"
   ]
 }

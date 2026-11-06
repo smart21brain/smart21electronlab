@@ -84,6 +84,20 @@ export default {
       if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405, cors);
       return handleAI(request, env, cors);
     }
-    return env.ASSETS.fetch(request);
+    return withHeaders(await env.ASSETS.fetch(request), url);
   }
 };
+
+/* Security + caching headers for the website files (good for SEO speed scores and safety). */
+function withHeaders(res, url) {
+  const r = new Response(res.body, res), h = r.headers, path = url.pathname;
+  h.set('X-Content-Type-Options', 'nosniff');
+  h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  h.set('Strict-Transport-Security', 'max-age=31536000');
+  if (/\.(png|jpe?g|webp|svg|ico|woff2?)$/i.test(path)) h.set('Cache-Control', 'public, max-age=2592000');
+  else if (/\.(js|css)$/i.test(path)) h.set('Cache-Control', 'public, max-age=3600, must-revalidate');
+  else if (/\/(robots\.txt|sitemap\.xml)$/.test(path)) h.set('Cache-Control', 'public, max-age=86400');
+  else if (path === '/sw.js' || path.endsWith('.html') || path === '/') h.set('Cache-Control', 'public, max-age=0, must-revalidate');
+  return r;
+}

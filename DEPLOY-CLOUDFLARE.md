@@ -31,3 +31,12 @@ Local test: `npm run cf:dev`
 - a Worker on `*.workers.dev` works;
 - a Worker on a DIFFERENT custom domain needs that domain added to `connect-src` in `src/index.html` (then run `npm run cf:deploy`).
 After deploying, reload the page twice (or Ctrl+Shift+R) so the browser replaces its cached copy of the old page.
+
+## SEO (v1.9.0)
+Site address used everywhere: `https://smart21electronlab.smart21brain.com`. If your domain changes, search-and-replace it in `src/index.html`, `src/robots.txt` and `src/sitemap.xml`, then redeploy.
+After deploying:
+1. Google Search Console → add the site → Sitemaps → submit `sitemap.xml`; use "URL inspection → Request indexing" for the home page.
+2. Bing Webmaster Tools → import from Search Console.
+3. Test sharing: paste the link in WhatsApp/Facebook/X (the preview card shows `img/og-1200x630.png`).
+4. Check speed at pagespeed.web.dev. The Worker already adds caching + security headers.
+Ranking also needs real links to your site: link to it from smart21brain.com, your social profiles and YouTube videos.
