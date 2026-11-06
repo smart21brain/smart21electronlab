@@ -24,3 +24,10 @@ Local test: `npm run cf:dev`
 - **Circuit doctor:** real problems found in your circuit (reversed LED, short circuit, missing ground...) are sent to the AI so it explains the real faults.
 - **New modes:** Design, Troubleshoot, Arduino code. Follow-up question buttons appear under each answer.
 - **Protect your quota:** in `wrangler.jsonc` set `"ALLOWED_ORIGINS": "https://your-site.com"`. Optional per-IP limit: add a Rate Limiting binding named `RATE_LIMITER` (Dashboard → Worker → Settings → Bindings, or see the Cloudflare "Rate Limiting" docs).
+
+## Security policy (CSP) — why "Failed to fetch" happened
+`src/index.html` contains a Content-Security-Policy. Older versions had `connect-src 'none'`, which blocks every network request, including `/api/ai`. It is now `connect-src 'self' https://*.workers.dev`:
+- the Worker serving your own website (same address) works;
+- a Worker on `*.workers.dev` works;
+- a Worker on a DIFFERENT custom domain needs that domain added to `connect-src` in `src/index.html` (then run `npm run cf:deploy`).
+After deploying, reload the page twice (or Ctrl+Shift+R) so the browser replaces its cached copy of the old page.

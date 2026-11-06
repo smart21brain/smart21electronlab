@@ -358,7 +358,7 @@
     catch (e) {
       let alive = false; try { await fetch(ep, { mode: 'no-cors', cache: 'no-store' }); alive = true; } catch (_) {}
       if (alive) return { ok: false, cors: true, msg: '✗ ' + 'The Worker is alive (it opens in a tab) but the browser blocks this website from using it (CORS). The Worker you deployed is an OLD version. Redeploy the latest worker/index.js from this project: run "npm run cf:deploy", or Cloudflare → your Worker → Edit code → paste worker/index.js → Deploy. If you set ALLOWED_ORIGINS, it must be empty or contain ' + location.origin + '.' };
-      return { ok: false, net: true, msg: '✗ The browser cannot reach ' + where + ' (no answer at all). The address does not point to a running Worker: wrong address, DNS/route not set, or the Worker is not deployed.' };
+      return { ok: false, net: true, msg: '✗ The browser cannot reach ' + where + ' (no answer at all). The address does not point to a running Worker: wrong address, DNS/route not set, the Worker is not deployed, or this page\'s security policy (connect-src in index.html) does not allow that address.' };
     }
     let j = null; try { j = await r.json(); } catch (_) {}
     if (r.status === 403) return { ok: false, msg: '✗ The Worker refused this website (ALLOWED_ORIGINS in wrangler.jsonc). Add: ' + location.origin };
