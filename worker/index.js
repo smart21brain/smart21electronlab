@@ -5,6 +5,7 @@
    context, fast model for simple questions. If the expert model fails (quota, outage) the
    request is retried on the fast model. No API key is needed: the AI binding is in wrangler.jsonc.
    Optional protection (all off by default):
+     vars.EXTRA_MODELS = "@cf/vendor/model-a,@cf/vendor/model-b"  → add more Workers AI models without editing code
      vars.ALLOWED_ORIGINS = "https://my-site.com,https://other.com"  → only these sites may call /api/ai
      a Rate Limiting binding named RATE_LIMITER                       → per-IP limit (see DEPLOY-CLOUDFLARE.md) */
 
@@ -16,6 +17,7 @@ const ALLOWED_MODELS = new Set([
   '@cf/mistralai/mistral-small-3.1-24b-instruct',
   '@cf/qwen/qwen2.5-coder-32b-instruct'
 ]);
+const allowedModels = env => new Set([...ALLOWED_MODELS, ...String((env && env.EXTRA_MODELS) || '').split(',').map(x => x.trim()).filter(x => /^@cf\/[\w.\-\/]+$/.test(x))]);
 const HARD_MODES = new Set(['design', 'debug', 'trouble', 'code', 'calc']);
 const MAX_MESSAGES = 20, MAX_CHARS = 24000, MAX_SYSTEM = 12000, MAX_BODY = 250000, MAX_TOKENS = 2500;
 
@@ -33,11 +35,12 @@ function originAllowed(request, env, url) {
 
 function pickModel(req, env, totalChars) {
   const asked = String(req.model || '').trim();
-  if (ALLOWED_MODELS.has(asked)) return asked;
+  const allow = allowedModels(env);
+  if (allow.has(asked)) return asked;
   if (/^fast$/i.test(asked)) return FAST;
   if (/^expert$/i.test(asked)) return EXPERT;
   const dflt = String(env.AI_MODEL || '').trim();
-  if (ALLOWED_MODELS.has(dflt) && dflt !== FAST) return dflt;      // owner pinned a model in wrangler.jsonc
+  if (allow.has(dflt) && dflt !== FAST) return dflt;      // owner pinned a model in wrangler.jsonc
   return HARD_MODES.has(String(req.mode || '')) || req.ctx === true || totalChars > 3500 ? EXPERT : FAST;
 }
 
@@ -77,7 +80,7 @@ export default {
       const origin = request.headers.get('Origin'), cors = corsFor(origin);
       if (!originAllowed(request, env, url)) return json({ error: 'This website is not allowed to use this Worker.' }, 403, corsFor(null));
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
-      if (request.method === 'GET') return json({ ok: true, ai: !!env.AI, fast: FAST, expert: EXPERT, models: [...ALLOWED_MODELS] }, 200, cors);
+      if (request.method === 'GET') return json({ ok: true, ai: !!env.AI, fast: FAST, expert: EXPERT, models: [...allowedModels(env)] }, 200, cors);
       if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405, cors);
       return handleAI(request, env, cors);
     }

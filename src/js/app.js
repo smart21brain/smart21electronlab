@@ -28,21 +28,22 @@
 
   async function initSettings() {
     const api = window.s21, prov = $('#setProvider');
-    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2', cloudflare: 'auto (recommended) · fast · expert' };
+    const PH = { anthropic: 'claude-sonnet-5-5', openai: 'gpt-4o-mini  or  llama3.2', cloudflare: 'auto (recommended) · fast · expert · or any @cf/... model' };
     const web = !api && /^https?:$/.test(location.protocol);
     if (web) { $('#optCf').hidden = false; ['anthropic', 'openai'].forEach(v => { const o = prov.querySelector('option[value="' + v + '"]'); if (o) o.remove(); }); } else $('#optCf').remove();
     const sync = () => {
       const p = prov.value; $('#setOnline').style.display = p === 'offline' ? 'none' : ''; $('#setKeyRow').style.display = p === 'cloudflare' ? 'none' : '';
-      $('#setBaseRow').style.display = (p === 'openai' || p === 'cloudflare') ? '' : 'none'; $('#setBase').placeholder = p === 'cloudflare' ? 'Worker URL (leave empty if the Worker is on this same website), e.g. https://smart21electronlab.YOURNAME.workers.dev' : 'https://api.openai.com/v1  or  http://localhost:11434/v1';
+      $('#setBaseRow').style.display = (p === 'openai' || p === 'cloudflare') ? '' : 'none'; $('#setBase').placeholder = p === 'cloudflare' ? 'Leave EMPTY when the Worker serves this same website. Otherwise: https://your-worker.workers.dev' : 'https://api.openai.com/v1  or  http://localhost:11434/v1';
       $('#setModel').placeholder = PH[p] || '';
     };
     prov.onchange = sync;
     let s = { provider: 'offline', model: '', base: '', hasKey: false };
     if (api && api.getSettings) s = await api.getSettings();
     else if (web) { try { s = Object.assign({ provider: 'cloudflare', model: '', base: '', hasKey: false }, JSON.parse(localStorage.getItem('s21lab-web-ai') || '{}')); } catch (_) { s.provider = 'cloudflare'; } }
-    prov.value = s.provider; $('#setModel').value = s.model || ''; $('#setBase').value = (web ? s.url : s.base) || '';
+    prov.value = s.provider; $('#setModel').value = s.model || (web ? 'auto' : ''); $('#setBase').value = (web ? s.url : s.base) || '';
     $('#setKeyState').textContent = s.hasKey ? 'A key is stored securely. Leave this empty to keep it.' : (s.encrypted === false && s.provider !== 'offline' ? 'Note: secure storage is unavailable on this system.' : '');
     sync();
+    if (web) { try { fetch(S21.Tutor.cleanBase($('#setBase').value) + '/api/ai').then(r => r.json()).then(j => { const dl = $('#cfModels'); (j.models || []).forEach(m => { if (![...dl.options].some(o => o.value === m)) { const o = document.createElement('option'); o.value = m; dl.appendChild(o); } }); }).catch(() => {}); } catch (_) {} }
     $('#setSave').onclick = async () => {
       if (!api && web) { S21.Tutor.webSave(prov.value, $('#setModel').value.trim(), $('#setBase').value.trim()); $('#setMsg').textContent = 'Saved ✓'; S21.Tutor.refreshSettings(); return; }
       if (!api) { $('#setMsg').textContent = 'Online engines are available in the desktop app.'; return; }

@@ -13,6 +13,8 @@
     // "auto" = fast model for simple questions, expert (70B) for design/debug/troubleshoot/code.
     // Set ALLOWED_ORIGINS to "https://your-site.com" to stop other websites using your AI quota.
     "AI_MODEL": "auto",
-    "ALLOWED_ORIGINS": ""
+    "ALLOWED_ORIGINS": "",
+    // Add more Workers AI models here (comma separated), e.g. "@cf/meta/llama-4-scout-17b-16e-instruct"
+    "EXTRA_MODELS": ""
   }
 }

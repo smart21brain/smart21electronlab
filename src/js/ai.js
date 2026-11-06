@@ -349,7 +349,8 @@
   const webCfg = () => { try { return Object.assign({ provider: 'cloudflare', model: '' }, JSON.parse(localStorage.getItem(WKEY) || '{}')); } catch (_) { return { provider: 'cloudflare', model: '' }; } };
   const canOnline = () => Tutor.settings.provider !== 'offline' && ((root.s21 && root.s21.aiStart) || (WEB && Tutor.settings.provider === 'cloudflare'));
   /* "smart21.me", "https://smart21.me/", "https://x.workers.dev/api/ai"  →  "https://smart21.me"  (empty = this same website) */
-  const cleanBase = u => { u = String(u || '').trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); return u.replace(/\/+$/, '').replace(/\/api\/ai$/i, '').replace(/\/+$/, ''); };
+  const cleanBase = u => { u = String(u || '').trim().replace(/[\s.,;:]+$/, ''); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); return u.replace(/\/+$/, '').replace(/\/api\/ai$/i, '').replace(/[\s.,;:\/]+$/, ''); };
+  Tutor.cleanBase = cleanBase;
   Tutor.webSave = (provider, model, url) => { try { localStorage.setItem(WKEY, JSON.stringify({ provider: provider === 'offline' ? 'offline' : 'cloudflare', model: model || '', url: cleanBase(url) })); } catch (_) {} };
   Tutor.testConnection = async function (rawUrl) {
     const ep = cleanBase(rawUrl) + '/api/ai', where = ep.startsWith('/') ? location.origin + ep : ep;
