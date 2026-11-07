@@ -141,3 +141,6 @@ elements `R`, `V`, `D`, `C`, `Q`) and optional `sync`/`read`/`update`. It appear
 * Fonts: Poppins is bundled in `src/fonts/` (SIL Open Font License) because the app's content-security policy only allows local fonts.
 * Colours are CSS variables at the top of `src/css/app.css` (`--gold`, `--green-deep`, `--bg`, `--panel`…). Light mode uses the same layout.
 * New files: `src/js/aifab.js` (floating AI), `src/js/gsearch.js` (header search).
+
+## Mobile / responsive
+`src/css/mobile.css` + `src/js/mobile.js` make the app usable on phones and tablets (≤820 px): the Circuit Lab shows the canvas full-screen with a bottom bar that opens **Parts**, **Code & scope** and **Learn & props** as sheets; pinch to zoom / two-finger pan on the canvas; Lessons, Challenges and AI chats use slide-in drawers; modals become bottom sheets. Desktop layout is unchanged.

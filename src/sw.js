@@ -3,6 +3,7 @@ const CACHE = 'smart21-electrolab-1.0.0';
 const ASSETS = [
  "./",
  "css/app.css",
+ "css/mobile.css",
  "fonts/OFL-LICENSE.txt",
  "fonts/poppins-latin-500-normal.woff2",
  "fonts/poppins-latin-600-normal.woff2",
@@ -36,6 +37,7 @@ const ASSETS = [
  "js/lessons2.js",
  "js/library.js",
  "js/logic.js",
+ "js/mobile.js",
  "js/onboarding.js",
  "js/plotter.js",
  "js/pwa.js",

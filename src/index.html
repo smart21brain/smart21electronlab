@@ -5,7 +5,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f7a5a">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.workers.dev; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Smart21 ElectroLab | Free Arduino Simulator, Circuit Simulator & AI Electronics Tutor</title>
 <meta name="description" content="Learn electronics by doing: build circuits, run Arduino code in a free online emulator, and ask Smart21 AI to explain, calculate, design and troubleshoot. Works in your browser and offline.">
 <meta name="keywords" content="Arduino simulator, circuit simulator, electronics lab, Arduino emulator online, learn electronics, AI electronics tutor, Ohm's law calculator, LED resistor calculator, breadboard simulator, Smart21">
@@ -29,10 +29,13 @@
 <meta name="application-name" content="Smart21 ElectroLab">
 <meta name="apple-mobile-web-app-title" content="ElectroLab">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Smart21 ElectroLab", "url": "https://smart21electronlab.smart21brain.com/", "description": "Learn electronics by doing: build circuits, run Arduino code in a free online emulator, and ask Smart21 AI to explain, calculate, design and troubleshoot. Works in your browser and offline.", "applicationCategory": "EducationalApplication", "operatingSystem": "Any (web browser)", "browserRequirements": "Requires JavaScript", "inLanguage": "en", "image": "https://smart21electronlab.smart21brain.com/img/og-1200x630.png", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "featureList": ["Circuit simulator", "Arduino Uno emulator", "AI electronics tutor (Smart21 AI)", "Circuit doctor that finds wiring mistakes", "Built-in calculators: Ohm's law, LED resistor, voltage divider, RC, 555 timer", "Works offline as an installable app"], "publisher": {"@type": "Organization", "name": "Smart21", "url": "https://smart21brain.com/", "logo": "https://smart21electronlab.smart21brain.com/img/logo-512.png"}}</script>
 <link rel="icon" type="image/png" href="img/appicon-64.png">
 <link rel="apple-touch-icon" href="img/appicon-192.png">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
 <noscript>
@@ -377,5 +380,6 @@
 <script src="js/aifab.js"></script>
 <script src="js/gsearch.js"></script>
 <script src="js/app.js"></script>
+<script src="js/mobile.js"></script>
 </body>
 </html>
