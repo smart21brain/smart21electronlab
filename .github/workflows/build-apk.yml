@@ -21,8 +21,17 @@ jobs:
       - run: npx -y @capacitor/assets generate --android
         continue-on-error: true     # custom icon is optional; the build continues with the default one
       - run: npx cap sync android
-      - run: ./gradlew assembleDebug
+      - name: Build APK (longer download timeout + retries)
         working-directory: android
+        run: |
+          sed -i '/networkTimeout/d' gradle/wrapper/gradle-wrapper.properties
+          echo 'networkTimeout=180000' >> gradle/wrapper/gradle-wrapper.properties
+          sed -i 's/-all\.zip/-bin.zip/' gradle/wrapper/gradle-wrapper.properties
+          for i in 1 2 3 4; do
+            ./gradlew assembleDebug && exit 0
+            echo "Attempt $i failed, retrying in 30 seconds..."; sleep 30
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: Smart21-ElectroLab-apk
