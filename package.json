@@ -16,11 +16,17 @@
     "pwa": "node scripts/make-pwa.js",
     "dist:all": "electron-builder --win --linux",
     "cf:dev": "npm run pwa && npx wrangler dev",
-    "cf:deploy": "npm run pwa && npx wrangler deploy"
+    "cf:deploy": "npm run pwa && npx wrangler deploy",
+    "android:sync": "npm run pwa && npx cap sync android",
+    "android:open": "npx cap open android"
   },
   "devDependencies": {
     "electron": "^33.2.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/assets": "^3.0.5"
   },
   "build": {
     "appId": "com.smart21.electrolab",

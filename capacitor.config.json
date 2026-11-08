@@ -1,0 +1,7 @@
+{
+  "appId": "com.smart21.electrolab",
+  "appName": "Smart21 ElectroLab",
+  "webDir": "src",
+  "backgroundColor": "#0e1411",
+  "server": { "androidScheme": "https" }
+}

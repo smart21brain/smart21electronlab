@@ -412,7 +412,9 @@
   }
   async function webAI(id, req, a) {
     const ctl = new AbortController(); a.ctl = ctl;
-    let endpoint = cleanBase(Tutor.settings && Tutor.settings.url) + '/api/ai';
+    let base = cleanBase(Tutor.settings && Tutor.settings.url);
+    if (!base && window.Capacitor) base = 'https://smart21electronlab.smart21brain.com';   // Android app: use the hosted Worker
+    let endpoint = base + '/api/ai';
     try {
       const init = { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) };
       let res;
