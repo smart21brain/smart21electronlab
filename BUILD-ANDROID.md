@@ -14,7 +14,7 @@ Needs Node.js 20+, Java 21 and Android Studio (for the Android SDK).
 npm install
 npm run pwa
 npx cap add android
-npx capacitor-assets generate --android
+npx -y @capacitor/assets generate --android
 npx cap sync android
 cd android && ./gradlew assembleDebug      # on Windows: gradlew.bat assembleDebug
 ```
