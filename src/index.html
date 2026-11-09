@@ -47,7 +47,7 @@
 #appSplash .pw b{display:block;margin-top:4px;color:#fff;font-size:18px;font-weight:600;letter-spacing:.6px}
 #appSplash .pw b span{color:#FFC93C}
 </style>
-<script>if (window.Capacitor || /; wv\)/.test(navigator.userAgent)) document.documentElement.classList.add('cap-app');</script>
+<script src="js/splash.js"></script>
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/mobile.css">
 </head>
@@ -61,8 +61,6 @@
   </div>
   <div class="pw">Powered by<b>Smart21<span>Brain</span></b></div>
 </div>
-<script>(function(){var el=document.getElementById('appSplash'),done=false;function hide(){if(done)return;done=true;setTimeout(function(){el.classList.add('hide');setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},600);},Math.max(0,1600-performance.now()));}
-if(document.readyState==='complete')hide();else addEventListener('load',hide);setTimeout(hide,7000);})();</script>
 
 <noscript>
 <main style="max-width:760px;margin:2rem auto;padding:0 1rem;font-family:system-ui,sans-serif;line-height:1.6;color:#e8f0ec;background:#0e1411">
