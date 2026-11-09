@@ -86,7 +86,6 @@ button, .btn, .nav, .tab, select { touch-action: manipulation; -webkit-tap-highl
   /* floating AI button: keep it clear of the bottom bar and smaller */
   .ai-fab { right: 12px; bottom: 12px; }
   body[data-view="lab"] .ai-fab { bottom: calc(var(--mob-bar-h) + 12px + env(safe-area-inset-bottom)); }
-  .fab-label { display: none; } .fab-btn { padding: 0; width: 52px; height: 52px; justify-content: center; }
   .fab-panel { width: calc(100vw - 16px); right: -4px; height: min(580px, calc(100dvh - 150px)); }
   body[data-sheet] .ai-fab { display: none; }
 

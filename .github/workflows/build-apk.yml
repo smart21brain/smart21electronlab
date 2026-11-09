@@ -18,6 +18,7 @@ jobs:
       - run: npm install
       - run: npm run pwa            # refresh the offline file list in src/sw.js
       - run: npx cap add android
+      - run: node scripts/android-splash.js     # black splash screen with the Smart21 logo
       - run: npx -y @capacitor/assets generate --android
         continue-on-error: true     # custom icon is optional; the build continues with the default one
       - run: npx cap sync android

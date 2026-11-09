@@ -34,10 +34,36 @@
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "Smart21 ElectroLab", "url": "https://smart21electronlab.smart21brain.com/", "description": "Learn electronics by doing: build circuits, run Arduino code in a free online emulator, and ask Smart21 AI to explain, calculate, design and troubleshoot. Works in your browser and offline.", "applicationCategory": "EducationalApplication", "operatingSystem": "Any (web browser)", "browserRequirements": "Requires JavaScript", "inLanguage": "en", "image": "https://smart21electronlab.smart21brain.com/img/og-1200x630.png", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "featureList": ["Circuit simulator", "Arduino Uno emulator", "AI electronics tutor (Smart21 AI)", "Circuit doctor that finds wiring mistakes", "Built-in calculators: Ohm's law, LED resistor, voltage divider, RC, 555 timer", "Works offline as an installable app"], "publisher": {"@type": "Organization", "name": "Smart21", "url": "https://smart21brain.com/", "logo": "https://smart21electronlab.smart21brain.com/img/logo-512.png"}}</script>
 <link rel="icon" type="image/png" href="img/appicon-64.png">
 <link rel="apple-touch-icon" href="img/appicon-192.png">
+<style id="capSplashCss">
+#appSplash{display:none;position:fixed;inset:0;z-index:2147483000;background:#000;flex-direction:column;align-items:center;justify-content:space-between;box-sizing:border-box;padding:calc(env(safe-area-inset-top,0px) + 24vh) 0 calc(env(safe-area-inset-bottom,0px) + 7vh);font-family:system-ui,'Segoe UI',Roboto,Arial,sans-serif;user-select:none;-webkit-user-select:none;transition:opacity .45s ease}
+.cap-app #appSplash{display:flex}
+#appSplash.hide{opacity:0;pointer-events:none}
+#appSplash .stage{position:relative;width:240px;height:240px;flex:none}
+#appSplash .stage img{position:absolute;inset:26px;width:188px;height:188px;object-fit:contain}
+#appSplash .stage svg{position:absolute;inset:0;width:100%;height:100%}
+#appSplash .spin{transform-origin:120px 120px;animation:capSpin 1.6s linear infinite}
+@keyframes capSpin{to{transform:rotate(360deg)}}
+#appSplash .pw{text-align:center;color:#9aa3a0;font-size:14px;letter-spacing:.4px}
+#appSplash .pw b{display:block;margin-top:4px;color:#fff;font-size:18px;font-weight:600;letter-spacing:.6px}
+#appSplash .pw b span{color:#FFC93C}
+</style>
+<script>if (window.Capacitor || /; wv\)/.test(navigator.userAgent)) document.documentElement.classList.add('cap-app');</script>
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
+<div id="appSplash" aria-hidden="true">
+  <div class="stage">
+    <svg viewBox="0 0 240 240"><defs><linearGradient id="capG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#21C03A"/><stop offset="1" stop-color="#FFB800"/></linearGradient></defs>
+      <circle cx="120" cy="120" r="108" fill="none" stroke="#3a403e" stroke-width="2"/>
+      <g class="spin"><circle cx="120" cy="120" r="108" fill="none" stroke="url(#capG)" stroke-width="12" stroke-linecap="round" stroke-dasharray="500 679" transform="rotate(-90 120 120)"/></g></svg>
+    <img src="img/appicon-512.png" alt="">
+  </div>
+  <div class="pw">Powered by<b>Smart21<span>Brain</span></b></div>
+</div>
+<script>(function(){var el=document.getElementById('appSplash'),done=false;function hide(){if(done)return;done=true;setTimeout(function(){el.classList.add('hide');setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},600);},Math.max(0,1600-performance.now()));}
+if(document.readyState==='complete')hide();else addEventListener('load',hide);setTimeout(hide,7000);})();</script>
+
 <noscript>
 <main style="max-width:760px;margin:2rem auto;padding:0 1rem;font-family:system-ui,sans-serif;line-height:1.6;color:#e8f0ec;background:#0e1411">
 <h1>Smart21 ElectroLab: free Arduino simulator, circuit lab and AI electronics tutor</h1>
