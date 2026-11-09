@@ -1,0 +1,101 @@
+{
+  "name": "smart21-electrolab",
+  "productName": "Smart21 ElectroLab",
+  "version": "1.0.2",
+  "description": "Desktop emulator for studying Arduino and electronics: circuit simulator, Arduino Uno sketch emulator, lessons and an AI tutor.",
+  "main": "main.js",
+  "author": "Smart21",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/run-all.js",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "pwa": "node scripts/make-pwa.js",
+    "dist:all": "electron-builder --win --linux",
+    "cf:dev": "npm run pwa && npx wrangler dev",
+    "cf:deploy": "npm run pwa && npx wrangler deploy",
+    "android:sync": "npm run pwa && npx cap sync android",
+    "android:open": "npx cap open android"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/android": "^7.0.0"
+  },
+  "build": {
+    "appId": "com.smart21.electrolab",
+    "productName": "Smart21 ElectroLab",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json",
+      "!src/**/*.map"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "publisherName": "Smart21"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.education",
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "icon": "build/icon.png"
+    },
+    "artifactName": "Smart21-ElectroLab-${version}-${os}-${arch}.${ext}",
+    "copyright": "Copyright \u00a9 Smart21",
+    "fileAssociations": [
+      {
+        "ext": "s21lab",
+        "name": "ElectroLab project",
+        "description": "Smart21 ElectroLab project",
+        "role": "Editor"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Smart21 ElectroLab",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "Smart21-ElectroLab-${version}-portable.${ext}"
+    }
+  }
+}
