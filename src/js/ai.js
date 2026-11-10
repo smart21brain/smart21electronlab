@@ -348,6 +348,8 @@
   const WKEY = 's21lab-web-ai';
   const webCfg = () => { try { return Object.assign({ provider: 'cloudflare', model: '' }, JSON.parse(localStorage.getItem(WKEY) || '{}')); } catch (_) { return { provider: 'cloudflare', model: '' }; } };
   const isOnline = () => root.navigator.onLine !== false;
+  const OFFLINE_NOTICE = 'You are using offline AI, connect to internet for best result.';
+  const withNotice = (reply, bub) => { if (reply.t && reply.t.indexOf(OFFLINE_NOTICE) < 0) { reply.t = '📴 ' + OFFLINE_NOTICE + '\n\n' + reply.t; bub.innerHTML = md(reply.t); } };
   const canOnline = () => Tutor.settings.provider !== 'offline' && ((root.s21 && root.s21.aiStart) || (WEB && Tutor.settings.provider === 'cloudflare')) && (Tutor.settings.provider !== 'cloudflare' || isOnline());
   /* "smart21.me", "https://smart21.me/", "https://x.workers.dev/api/ai"  →  "https://smart21.me"  (empty = this same website) */
   const cleanBase = u => { u = String(u || '').trim().replace(/[\s.,;:]+$/, ''); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); return u.replace(/\/+$/, '').replace(/\/api\/ai$/i, '').replace(/[\s.,;:\/]+$/, ''); };
@@ -448,7 +450,8 @@
       if (ctl.signal.aborted) { a.resolve(); return; }
       const netFail = e instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(String(e && e.message));
       let cors = false; if (netFail && !ctl.signal.aborted && !endpoint.startsWith('/')) { try { await fetch(endpoint, { mode: 'no-cors', cache: 'no-store' }); cors = true; } catch (_) {} }
-      if (netFail && !cors && !a.reply.t && !ctl.signal.aborted && fallbackOffline(a, isOnline() ? 'Smart21 AI could not be reached' : 'No internet connection')) return;
+      if (!a.reply.t && !ctl.signal.aborted && fallbackOffline(a)) return;                 // no error messages: answer offline instead
+      if (a.reply.t) { withNotice(a.reply, a.bub); a.resolve(); return; }                    // connection dropped mid-answer: keep what we have
       a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + (cors ? 'Smart21 AI is blocked by the browser (CORS). The Worker at ' + endpoint + ' is alive but it is an **old version** without permission for this website. Redeploy the latest `worker/index.js` from the project (`npm run cf:deploy`, or Cloudflare → your Worker → Edit code → paste it → Deploy), then try again.' : netFail ? 'Smart21 AI could not be reached (' + (endpoint.startsWith('/') ? location.origin + endpoint : endpoint) + '). Check your internet, then open **Settings → AI tutor engine** and press **Test connection** to see exactly what is wrong.' : (e.message || e) + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'); a.bub.innerHTML = md(a.reply.t); a.resolve();
     }
   }
@@ -513,7 +516,7 @@
     const s = Object.assign({}, Tutor.settings); if (s.provider === 'cloudflare' && !isOnline()) s.provider = 'offline'; let label = 'Smart21 Tutor · offline';
     if (s.provider === 'cloudflare') label = 'Smart21 AI'; else if (s.provider === 'anthropic') label = 'Claude · ' + (s.model || 'default model'); else if (s.provider === 'openai') label = (s.model || 'OpenAI-compatible') + (s.base && /localhost|127\.0\.0\.1/.test(s.base) ? ' · local' : '');
     $('#aiEngine').textContent = label; Tutor.engineLabel = label; (Tutor.onEngine || []).forEach(fn => { try { fn(label, s); } catch (_) {} });
-    $('#aiFine').textContent = s.provider === 'offline' ? (Tutor.settings.provider === 'cloudflare' ? 'No internet: the built-in offline tutor is answering. Smart21 AI comes back automatically when you are online.' : 'Offline tutor: great for calculations and the basics. Choose Smart21 AI (Workers AI) in Settings for open-ended questions.') : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
+    $('#aiFine').textContent = s.provider === 'offline' ? (Tutor.settings.provider === 'cloudflare' ? OFFLINE_NOTICE : OFFLINE_NOTICE) : 'Your message' + ($('#aiCtx').checked ? ' and your circuit/sketch are' : ' is') + ' sent to the AI service you configured.';
   }
 
   const SYSTEM = [
@@ -543,7 +546,7 @@
     const wantCtx = $('#aiCtx').checked;
     try {
       if (canOnline()) await online(chat, mode, wantCtx, reply, bub);
-      else await offline(text, mode, chat, wantCtx, reply, bub);
+      else { await offline(text, mode, chat, wantCtx, reply, bub); if (Tutor.settings.provider === 'cloudflare') withNotice(reply, bub); }
     } catch (e) { reply.t += (reply.t ? '\n\n' : '') + '⚠️ ' + (e.message || e); bub.innerHTML = md(reply.t); }
     Tutor.busy = false; setSend(false); save(); decorate(bub); scroll(); renderHistory();
   }
@@ -560,7 +563,7 @@
     if (Tutor.active && Tutor.active.id === a.id) Tutor.active = null;
     a.reply.t = '';
     offline(f.text, f.mode, f.chat, f.wantCtx, a.reply, a.bub).then(() => {
-      a.reply.t = '📴 ' + (why || 'Smart21 AI could not be reached') + ', so the built-in offline tutor answered. Smart21 AI comes back automatically when it is available.\n\n' + a.reply.t;
+      a.reply.t = '📴 ' + OFFLINE_NOTICE + '\n\n' + a.reply.t;
       a.bub.innerHTML = md(a.reply.t); a.resolve();
     }, () => a.resolve());
     return true;
@@ -614,7 +617,7 @@
       const a = Tutor.active; if (!a || ev.id !== a.id) return;
       if (ev.type === 'chunk') { a.reply.t += ev.text; paint(a); }
       else if (ev.type === 'done') { Tutor.active = null; finish(a); }
-      else if (ev.type === 'error' && ev.fallback && !a.reply.t && fallbackOffline(a, ev.message)) { /* answered by the offline tutor */ }
+      else if (ev.type === 'error' && !a.reply.t && fallbackOffline(a)) { /* answered by the offline tutor */ }
       else if (ev.type === 'error') { Tutor.active = null; a.reply.t += (a.reply.t ? '\n\n' : '') + '⚠️ ' + ev.message + '\n\nCheck **Settings → AI tutor engine**, or switch back to the offline tutor.'; a.bub.innerHTML = md(a.reply.t); a.resolve(); }
     });
     Tutor.cur = Tutor.chats.find(c => c.msgs.length) || null; if (!Tutor.cur) newChat(); else renderAll();
@@ -626,7 +629,7 @@
     Tutor.busy = true;
     try {
       if (canOnline()) await online(chat, mode || '', wantCtx, reply, bub);
-      else await offline(text, mode || '', chat, wantCtx, reply, bub);
+      else { await offline(text, mode || '', chat, wantCtx, reply, bub); if (Tutor.settings.provider === 'cloudflare') withNotice(reply, bub); }
     } catch (e) { reply.t += (reply.t ? '\n\n' : '') + '⚠️ ' + (e.message || e); bub.innerHTML = md(reply.t); }
     Tutor.busy = false; save(); decorate(bub);
   };
