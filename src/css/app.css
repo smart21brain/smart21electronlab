@@ -489,3 +489,12 @@ body[data-view="lab"] .fab-label { display: none; } body[data-view="lab"] .ai-fa
 .aichips { display: flex; flex-wrap: wrap; gap: .45rem; margin: .5rem 0 .2rem; }
 .aichip { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 999px; padding: .38rem .85rem; cursor: pointer; font: inherit; font-size: .84rem; text-align: left; line-height: 1.35; }
 .aichip:hover { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 12%, var(--panel)); }
+
+/* Arrow at the end of the top menu: shows the items that do not fit on a small screen */
+#topnav { position: relative; }
+#navMore { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); z-index: 5; width: 36px; height: 36px; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; background: var(--panel); color: var(--gold); border: 1.5px solid color-mix(in srgb, var(--gold) 60%, transparent); box-shadow: -10px 0 14px 4px var(--bg); }
+#navMore[hidden], #navMoreMenu[hidden] { display: none; }
+#navMore[aria-expanded="true"] svg { transform: rotate(180deg); }
+#navMoreMenu { position: absolute; right: 8px; top: calc(100% - 4px); z-index: 60; min-width: 170px; padding: .35rem; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
+#navMoreMenu button { border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; font-size: .95rem; text-align: left; padding: .7rem .9rem; border-radius: 10px; cursor: pointer; min-height: 44px; }
+#navMoreMenu button:hover, #navMoreMenu button.on { background: color-mix(in srgb, var(--brand) 16%, var(--panel)); }

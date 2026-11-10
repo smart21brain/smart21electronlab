@@ -78,7 +78,7 @@
     const hour = new Date().getHours(), greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
     const ready = certReady();
     host.innerHTML =
-      '<header class="home-hero"><div class="hero-copy"><h1>' + greet + (name ? ', ' + esc(name.split(' ')[0]) : '') + '</h1><p>Build circuits, write Arduino code, and learn by experimenting. Everything runs on your computer, offline.</p>' +
+      '<header class="home-hero"><div class="hero-copy"><h1>' + greet + (name ? ', ' + esc(name.split(' ')[0]) : '') + '</h1><p>Build circuits, write Arduino code, and learn by experimenting. Everything runs on your computer, mobile phone and tablets, offline.</p>' +
       '<div class="home-actions"><button class="btn gold" id="hmNew">New circuit</button><button class="btn ghost" id="hmGal">Examples gallery</button><button class="btn ghost" id="hmOpen">Open project</button><button class="btn ghost" id="hmTour">Take the tour</button></div>' +
       '<div class="hero-stats"><span class="hchip"><b>' + St.size('examples') + '</b> Examples tried</span><span class="hchip"><b>' + St.count('runs') + '</b> Simulations</span><span class="hchip"><b>' + hours(St.count('simSeconds')) + '</b> Simulated</span><span class="hchip"><b>' + St.size('parts') + '</b> Part types</span></div></div>' +
       '<div class="hero-ring" aria-hidden="true"><img src="img/logo-192.png" alt=""></div></header>' +

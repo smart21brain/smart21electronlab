@@ -412,16 +412,17 @@
   }
   async function webAI(id, req, a) {
     const ctl = new AbortController(); a.ctl = ctl;
+    const APP_DEFAULT = 'https://smart21electronlab.smart21brain.com', isApp = !!window.Capacitor || /; wv\)/.test(navigator.userAgent);
     let base = cleanBase(Tutor.settings && Tutor.settings.url);
-    if (!base && window.Capacitor) base = 'https://smart21electronlab.smart21brain.com';   // Android app: use the hosted Worker
+    if (!base && isApp) base = APP_DEFAULT;   // Android app: use the hosted Worker
     let endpoint = base + '/api/ai';
     try {
       const init = { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req) };
       let res;
       try { res = await fetch(endpoint, init); }
       catch (e0) {
-        if (endpoint === '/api/ai' || ctl.signal.aborted) throw e0;
-        endpoint = '/api/ai'; res = await fetch(endpoint, init);      // typed address is dead: use this website's own Worker
+        if (endpoint === '/api/ai' || ctl.signal.aborted || (isApp && base === APP_DEFAULT)) throw e0;
+        endpoint = isApp ? APP_DEFAULT + '/api/ai' : '/api/ai'; res = await fetch(endpoint, init);      // typed address is dead: use this website's own Worker
         Tutor.settings.url = ''; Tutor.webSave(Tutor.settings.provider, Tutor.settings.model, '');
       }
       if (!res.ok || !/event-stream/.test(res.headers.get('content-type') || '')) {
