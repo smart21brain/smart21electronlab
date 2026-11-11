@@ -498,3 +498,47 @@ body[data-view="lab"] .fab-label { display: none; } body[data-view="lab"] .ai-fa
 #navMoreMenu { position: absolute; right: 8px; top: calc(100% - 4px); z-index: 60; min-width: 170px; padding: .35rem; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
 #navMoreMenu button { border: 0; background: none; color: var(--text); font: inherit; font-weight: 600; font-size: .95rem; text-align: left; padding: .7rem .9rem; border-radius: 10px; cursor: pointer; min-height: 44px; }
 #navMoreMenu button:hover, #navMoreMenu button.on { background: color-mix(in srgb, var(--brand) 16%, var(--panel)); }
+
+/* ===================== resizable Circuit Lab panels (desktop & laptop) ===================== */
+.split, .split-in { display: none; }
+@media (min-width: 821px) {
+  /* sizes scale with the window, so laptops (1280 / 1366 / 1440 / 1536 px) and big monitors both get a sensible default */
+  html #view-lab { grid-template-columns: var(--pal-w, clamp(170px, 15vw, 250px)) minmax(0, 1fr) var(--rdock-w, clamp(260px, 22vw, 380px)); grid-template-rows: auto minmax(0, 1fr) var(--dock-h, clamp(200px, 30vh, 380px)); }
+  html #view-lab .palette { min-width: 0; overflow: hidden; }
+  html #view-lab.pal-off .palette, html #view-lab.rdock-off .rdock { visibility: hidden; border: 0; }
+  html #view-lab.dock-off .dock-body { display: none; }
+  .rdock-resize { display: none; }
+  .rpanel.collapsed { flex: 0 0 auto !important; }
+  .rdock:has(.rpanel.collapsed) .split-in { display: none; }
+
+  .split { display: block; position: absolute; z-index: 25; touch-action: none; outline: none; }
+  .split.v { top: 0; bottom: 0; width: 12px; cursor: col-resize; }
+  .split.h { left: 0; right: 0; height: 12px; cursor: row-resize; }
+  #splitPal { grid-column: 1; grid-row: 2 / 4; right: -6px; }
+  #splitRdock { grid-column: 3; grid-row: 2 / 4; left: -6px; }
+  #splitDock { grid-column: 2; grid-row: 3; top: -6px; }
+  html #view-lab.pal-off #splitPal { right: -12px; }
+  html #view-lab.rdock-off #splitRdock { left: -12px; }
+  .split::before { content: ""; position: absolute; background: var(--brand); opacity: 0; transition: opacity .15s; border-radius: 2px; }
+  .split.v::before { left: 5px; width: 2px; top: 0; bottom: 0; }
+  .split.h::before { top: 5px; height: 2px; left: 0; right: 0; }
+  .split:hover::before, .split:focus-visible::before, .split.drag::before { opacity: .9; }
+  .split button { position: absolute; z-index: 1; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 999px; background: var(--panel); color: var(--soft); border: 1px solid var(--line); opacity: .75; transition: opacity .15s, background .15s, color .15s; }
+  .split.v button { width: 14px; height: 46px; left: -1px; top: 50%; transform: translateY(-50%); }
+  .split.h button { width: 46px; height: 14px; top: -1px; left: 50%; transform: translateX(-50%); }
+  .split button:hover, .split:hover button, .split.drag button { opacity: 1; background: var(--brand); color: #fff; border-color: var(--brand); }
+  .split button svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+  .split button[data-arrow="right"] svg { transform: rotate(180deg); }
+  .split button[data-arrow="down"] svg { transform: rotate(-90deg); }
+  .split button[data-arrow="up"] svg { transform: rotate(90deg); }
+
+  .split-in { display: block; position: relative; flex: none; height: 9px; margin: -4px 0; z-index: 6; cursor: row-resize; touch-action: none; }
+  .split-in::before { content: ""; position: absolute; left: 0; right: 0; top: 3px; height: 3px; border-radius: 2px; background: var(--brand); opacity: 0; transition: opacity .15s; }
+  .split-in::after { content: ""; position: absolute; left: 50%; top: 3px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px; background: var(--soft); opacity: .45; }
+  .split-in:hover::before, .split-in.drag::before { opacity: .9; } .split-in:hover::after, .split-in.drag::after { opacity: 0; }
+  body.s21-rx, body.s21-rx * { cursor: col-resize !important; user-select: none !important; }
+  body.s21-ry, body.s21-ry * { cursor: row-resize !important; user-select: none !important; }
+}
+/* smaller laptops: keep the toolbar on one line by showing icons only (hover for the name) */
+@media (min-width: 821px) and (max-width: 1500px) { .toolbar .btn:has(.ic):not(#btnRun) > span:not(.pill) { display: none; } }
+@media (min-width: 821px) and (max-width: 1300px) { .tb-status .soft { display: none; } .toolbar { gap: .3rem .4rem; } }
